@@ -1,0 +1,173 @@
+---
+title: "Clase 6. Aplicacion AR(2)"
+subtitle: "Series de Tiempo | Semestre 2027-I | FC-UNAM"
+author: "Benjamin Oliva & Omar Alfaro-Rivera"
+date: "`r format(Sys.Date(), '%B %Y')`"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    theme: flatly
+    code_folding: show
+editor_options:
+  chunk_output_type: inline
+---
+
+## ¿Qué aprenderemos hoy?
+
+Extendemos el AR(1) al caso de dos rezagos y analizamos la estacionariedad del AR(2) en términos de las raíces del polinomio característico. Un AR(2) puede generar ciclos amortiguados cuando sus raíces son complejas, lo que lo hace especialmente útil para modelar series con comportamiento oscilatorio.
+
+Al terminar esta clase deberás poder:
+
+1. Estimar un AR(2) con `arima()` e interpretar sus dos coeficientes
+2. Calcular las raíces del polinomio característico y verificar que su módulo sea menor que 1
+3. Identificar si un AR(2) genera oscilaciones amortiguadas (raíces complejas) o convergencia monótona (raíces reales)
+
+**Datos:** `Base_Transporte.xlsx` (INEGI, transporte aéreo y metro CDMX, frecuencia mensual)
+
+---
+
+### Dependencies and Setup
+```{r setup, include = FALSE, warning = FALSE, message = FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+#install.packages("ggplot2")
+#install.packages("dplyr")
+#install.packages("readxl")
+#install.packages(stats)
+# 
+library(ggplot2)
+library(dplyr)
+library(readxl)
+library(stats)
+
+```
+
+# Importamos Datos:
+
+Los datos importados son:
+
+* Pax_Nal: Pasajeros (Salidas) en vuelos nacionales
+* Pax_Int: Pasajeros (Salidas) en vuelos internacionales 
+* Vue_Nal: Vuelos u operaciones (Salidas) en vuelos nacionales
+* Vue_Int: Vuelos u operaciones (Salidas) en vuelos internacionales
+* Pax_Metro: Pasajeros transportados (Millones) en el SCM
+
+Fuente: INEGI, https://www.inegi.org.mx/app/indicadores/?tm=0&t=1090
+
+```{r}
+
+Datos <- read_excel("../data/Base_Transporte.xlsx", sheet = "Datos", col_names = TRUE)
+
+tail(Datos)
+
+```
+
+# Conversion a series de tiempo:
+
+```{r}
+
+Pax_Nal <- ts(Datos$Pax_Nal, 
+              start = c(2000, 1),
+              freq = 12)
+
+# Logaritmos:
+LPax_Nal <- ts(log(Datos$Pax_Nal), 
+               start = c(2000, 1), 
+               freq = 12)
+
+# Diferencias mensuales:
+DLPax_Nal <- ts(log(Datos$Pax_Nal) - lag(log(Datos$Pax_Nal), 1),
+                start = c(2000, 1), freq = 12)
+
+```
+
+# Graficas:
+
+```{r, echo = FALSE}
+
+par(mfrow=c(3,1))
+
+plot(Pax_Nal, xlab = "Tiempo", ylab = "Pasajeros",
+     main = "Pasajeros en vuelos nacionales de salida",
+     col = "darkgreen")
+
+plot(LPax_Nal, xlab = "Tiempo", ylab = "LN Pasajeros",
+     main = "LN Pasajeros en vuelos nacionales de salida",
+     col = "darkblue")
+
+plot(DLPax_Nal, xlab = "Tiempo", ylab = "DLN Pasajeros",
+     main = "Diff LN Pasajeros en vuelos nacionales de salida", 
+     col = "darkred")
+
+par(mfrow=c(1,1))
+
+```
+
+# Estimacion del proceo AR(2)
+
+AR(2) en NIVELES:
+
+```{r}
+
+AR_LPax_Nal <- arima(LPax_Nal, order = c(2, 0, 0), method = "ML")
+
+AR_LPax_Nal
+
+plot(AR_LPax_Nal$residuals, 
+     xlab = "Tiempo", ylab = "",
+     main = "Residuales del AR (2) para LN \nde pasajeros en vuelos nacionales de salida",
+     col = "darkgreen")
+
+```
+
+AR(2) en DIFERENCIAS:
+
+```{r}
+
+AR_DLPax_Nal <- arima(DLPax_Nal, order = c(2, 0, 0), method = "ML")
+
+AR_DLPax_Nal
+
+plot(AR_DLPax_Nal$residuals, 
+     xlab = "Tiempo", ylab = "",
+     main = "Residuales del AR (2) para DLN \nde pasajeros en vuelos nacionales de salida",
+     col = "darkred")
+
+```
+
+# Función que extrae las raices del polinomio caracteristico y las grafica
+
+```{r}
+
+source("../utils/arroots.R")
+
+source("../utils/plot.armaroots.R")
+
+```
+
+# Graficas raíces:
+
+```{r, echo = FALSE}
+
+par(mfrow=c(1,2))
+
+plot.armaroots(arroots(AR_LPax_Nal), 
+               main="Inverse AR roots of \nAR(2): LN Pax Nal")
+
+#
+plot.armaroots(arroots(AR_DLPax_Nal),
+               main="Inverse AR roots of \nAR(2): Diff LN Pax Nal")
+
+par(mfrow=c(1,1))
+
+```
+
+---
+
+## Ejercicios
+
+1. Para el AR(2) estimado, calcula el periodo del ciclo implícito cuando las raíces son complejas. El periodo es 2π / arccos(parte real / módulo). ¿Cuántos meses dura el ciclo?
+2. Estima un AR(2) para `diff(log(Pax_Int))`. ¿Son las raíces reales o complejas? Grafica las raíces en el plano complejo unitario con `plot.armaroots()`.
+3. Compara el AIC del AR(1) (de la clase anterior) con el AIC del AR(2). ¿Justifica la mejora en ajuste agregar el segundo rezago?
+

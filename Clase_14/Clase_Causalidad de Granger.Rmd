@@ -1,0 +1,283 @@
+---
+title: "Clase 14. Causalidad de Granger"
+subtitle: "Series de Tiempo | Semestre 2027-I | FC-UNAM"
+author: "Benjamin Oliva & Omar Alfaro-Rivera"
+date: "`r format(Sys.Date(), '%B %Y')`"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    theme: flatly
+    code_folding: show
+editor_options:
+  chunk_output_type: inline
+---
+
+## ¿Qué aprenderemos hoy?
+
+Aplicamos la prueba de causalidad de Granger para detectar relaciones predictivas entre variables macroeconómicas: ¿mejora el historial del tipo de cambio la predicción de la inflación? ¿El IGAE anticipa movimientos en la tasa de interés? La causalidad de Granger no implica causalidad económica verdadera, sino *predictibilidad lineal*.
+
+Al terminar esta clase deberás poder:
+
+1. Interpretar correctamente la hipótesis nula de la prueba de Granger: "X no Granger-causa Y"
+2. Ejecutar `grangertest()` y evaluar la sensibilidad de los resultados al número de rezagos
+3. Distinguir entre causalidad de Granger y causalidad económica estructural
+
+**Datos:** `Datos_Ad.RData` — INPC, TC, CETE28 e IGAE ajustados por estacionalidad (de Clase_11)
+
+---
+
+### Dependencies and Setup
+```{r setup, include = FALSE, warning = FALSE, message = FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+#install.packages("ggplot2")
+#install.packages("dplyr")
+#install.packages("readxl")
+#install.packages(stats)
+#install.packages("zoo")
+#install.packages("lmtest")
+# 
+library(ggplot2)
+library(dplyr)
+library(readxl)
+library(stats)
+library(zoo)
+library(lmtest)
+
+```
+
+# Importamos Datos desde un archivo de R:
+
+Los datos "cargados" son los originales y los ajustados por estacionalidad. Los cuales son:
+
+* INPC: Indice Nacional de Precios al Consumidor (2QJul2018 = 100)
+
+* TC: Tipo de Cambio FIX 
+
+* CETE28: Tasa de rendimiento promedio mensual de los Cetes 28, en por ciento anual
+
+* IGAE: Indicador global de la actividad económica (2013 = 100)
+
+* IPI: Industrial Production Index (2012 = 100)
+
+```{r echo = FALSE}
+
+load("../data/Datos_Ad.RData")
+
+tail(Datos_Ad)
+
+```
+
+## Conversion a series de tiempo:
+
+```{r}
+
+LINPC <- ts(log(Datos_Ad$INPC_Ad), 
+           start = c(2000, 1), 
+           freq = 12)
+
+DLINPC <- diff(LINPC, lag = 1, differences = 1)
+  
+LTC <- ts(log(Datos_Ad$TC_Ad), 
+         start = c(2000, 1), 
+         freq = 12)
+
+DLTC <- diff(LTC, lag = 1, differences = 1)
+
+CETE28 <- ts(Datos_Ad$CETE28_Ad, 
+             start = c(2000, 1), 
+             freq = 12)
+
+DCETE28 <- diff(CETE28, lag = 1, differences = 1)
+
+```
+
+## Graficas:
+
+```{r }
+
+par(mfrow=c(3, 1))
+
+plot(DLINPC, xlab = "Tiempo", 
+     main = "Diferencias Logarítmicas del INPC",
+     col = "darkgreen")
+
+plot(DLTC, xlab = "Tiempo", 
+     main = "Diferencias Logarítmicas del Tipo de Cambio",
+     col = "darkblue")
+
+plot(DCETE28, xlab = "Tiempo", 
+     main = "Diferencias de los Cetes a 28 dias",
+     col = "darkred")
+
+par(mfrow=c(1, 1))
+
+```
+
+## Prueba de Causalidad de Granger
+
+```{r}
+Datos <- data.frame( cbind(DLINPC, DLTC, DCETE28) )
+
+names(Datos)
+```
+
+
+## Las pruebas de causalidad para 4, 8, 12 y 16 rezagos:
+
+### 4
+
+```{r }
+
+grangertest(DLINPC ~ DLTC, order = 4, data = Datos)
+
+```
+
+```{r }
+grangertest(DLTC ~ DLINPC, order = 4, data = Datos)
+
+```
+
+```{r }
+
+grangertest(DLINPC ~ DCETE28, order = 4, data = Datos)
+
+```
+
+```{r }
+
+grangertest(DCETE28 ~ DLINPC, order = 4, data = Datos)
+
+```
+
+```{r }
+
+grangertest(DLTC ~ DCETE28, order = 4, data = Datos)
+
+```
+
+```{r }
+
+grangertest(DCETE28 ~ DLTC, order = 4, data = Datos)
+
+```
+
+### 8
+
+```{r }
+
+grangertest(DLINPC ~ DLTC, order = 8, data = Datos)
+
+```
+
+```{r }
+grangertest(DLTC ~ DLINPC, order = 8, data = Datos)
+
+```
+
+```{r }
+
+grangertest(DLINPC ~ DCETE28, order = 8, data = Datos)
+
+```
+
+```{r }
+
+grangertest(DCETE28 ~ DLINPC, order = 8, data = Datos)
+
+```
+
+```{r }
+
+grangertest(DLTC ~ DCETE28, order = 8, data = Datos)
+
+```
+
+```{r }
+
+grangertest(DCETE28 ~ DLTC, order = 8, data = Datos)
+
+```
+
+### 12
+
+```{r }
+
+grangertest(DLINPC ~ DLTC, order = 12, data = Datos)
+
+```
+
+```{r }
+grangertest(DLTC ~ DLINPC, order = 12, data = Datos)
+
+```
+
+```{r }
+
+grangertest(DLINPC ~ DCETE28, order = 12, data = Datos)
+
+```
+
+```{r }
+
+grangertest(DCETE28 ~ DLINPC, order = 12, data = Datos)
+
+```
+
+```{r }
+
+grangertest(DLTC ~ DCETE28, order = 12, data = Datos)
+
+```
+
+```{r }
+
+grangertest(DCETE28 ~ DLTC, order = 12, data = Datos)
+
+```
+
+### 16
+
+```{r }
+
+grangertest(DLINPC ~ DLTC, order = 16, data = Datos)
+
+```
+
+```{r }
+grangertest(DLTC ~ DLINPC, order = 16, data = Datos)
+
+```
+
+```{r }
+
+grangertest(DLINPC ~ DCETE28, order = 16, data = Datos)
+
+```
+
+```{r }
+
+grangertest(DCETE28 ~ DLINPC, order = 16, data = Datos)
+
+```
+
+```{r }
+
+grangertest(DLTC ~ DCETE28, order = 16, data = Datos)
+
+```
+
+```{r }
+
+grangertest(DCETE28 ~ DLTC, order = 16, data = Datos)
+
+```
+
+---
+
+## Ejercicios
+
+1. Prueba si el TC Granger-causa al INPC para rezagos 1, 3, 6 y 12. ¿Cambia la significancia estadística con el número de rezagos? ¿Cuál es la interpretación económica de la dirección de causalidad encontrada?
+2. Construye la matriz completa de causalidad de Granger entre las cuatro variables (INPC, TC, CETE28, IGAE) para rezago=3. Muestra los p-valores en una tabla 4×4. ¿Qué par de variables tiene la relación más robusta?
+3. ¿Por qué es necesario que las series sean estacionarias (o cointegradas) para que la prueba de Granger sea válida? Relaciona con los resultados de raíz unitaria de la Clase 13.

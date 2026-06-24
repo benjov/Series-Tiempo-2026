@@ -1,0 +1,142 @@
+---
+title: "Clase 23. Modelos de Cambio de Regímen (TAR)"
+subtitle: "Series de Tiempo | Semestre 2027-I | FC-UNAM"
+author: "Benjamin Oliva & Omar Alfaro-Rivera"
+date: "`r format(Sys.Date(), '%B %Y')`"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    theme: flatly
+    code_folding: show
+editor_options:
+  chunk_output_type: inline
+---
+
+## ¿Qué aprenderemos hoy?
+
+Los modelos TAR (Threshold Autoregressive) capturan no linealidades en series de tiempo: el proceso sigue una dinámica distinta dependiendo de si la variable umbral supera o no un valor crítico. Se aplican a series con comportamientos asimétricos, como ciclos económicos o datos epidemiológicos.
+
+Al terminar esta clase deberás poder:
+
+1. Identificar visualmente si una serie puede presentar cambios de régimen usando gráficas de dispersión con retardos
+2. Estimar un modelo TAR(2) con `setar()` del paquete `tsDyn`, especificando el umbral y la variable de transición
+3. Interpretar los coeficientes del TAR por régimen y comparar la dinámica en el régimen de "alta transmisión" vs "baja transmisión"
+
+**Datos:** `flu.txt` — tasas mensuales de mortalidad por influenza en EUA, 11 años (132 observaciones)
+
+---
+
+### Dependencies and Setup
+```{r setup, include = FALSE, warning = FALSE, message = FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+#install.packages('astsa')
+#install.packages("tsDyn") #if not yet installed
+#
+library(astsa)
+library(tsDyn)
+
+```
+
+# Data:
+Monthly rates of deaths due to flu in the United States for 11 years
+
+```{r echo = FALSE}
+
+flu <- read.delim("flu.txt")
+
+head(flu)
+
+```
+
+# Convert time series
+
+```{r}
+
+flu <- ts(flu)
+
+D_flu = diff(flu, lag = 1)
+
+```
+
+# Plotting
+
+```{r}
+
+plot(flu, type = "b", col = "darkred", ylab = "", 
+     main = "Monthly rates of deaths due to flu in the United States")
+
+plot(D_flu, type="b", col = "darkred", ylab = "", 
+     main = "Diff Monthly rates of deaths due to flu in the United States")
+
+```
+
+# The tsDyn package in R has simplified this code into a handful of steps:
+
+```{r}
+
+#?setar
+
+flu_tar4_05 <- setar(flu, m = 2, thDelay = 1, th = 0.3) 
+
+```
+
+```{r}
+
+summary(flu_tar4_05) 
+
+```
+
+```{r}
+
+plot(flu_tar4_05)
+
+```
+
+```{r}
+
+#?setar
+
+D_flu_tar4_05 <- setar(D_flu, m = 2, thDelay = 1, th = 0.05) 
+
+```
+
+```{r}
+
+summary(D_flu_tar4_05) 
+
+```
+
+```{r}
+
+plot(D_flu_tar4_05)
+
+```
+
+### If we do not provide a threshold to the th option, setar searches over a grid to choose a threshold ~ 0.038:
+
+```{r}
+
+D_flu_tar4 <- setar(D_flu, m = 2, thDelay = 1)
+
+```
+
+```{r}
+
+summary(D_flu_tar4)
+
+```
+
+```{r}
+plot(D_flu_tar4)
+
+```
+
+---
+
+## Ejercicios
+
+1. Grafica la serie de mortalidad por influenza junto con su retardo de orden 1 en un diagrama de dispersión. ¿Identificas visualmente una estructura no lineal que sugiera cambio de régimen?
+2. Estima el TAR con distinto número de rezagos (p=1, 2, 3) y compara el AIC. ¿Es el modelo lineal AR(p) o el TAR con el mismo p el que tiene menor AIC?
+3. Compara el TAR con un modelo de Markov Switching (MS-AR) para la misma serie usando el paquete `MSwM`. ¿Cuál modelo captura mejor la asimetría de los ciclos de influenza? ¿Qué supuesto clave diferencia al TAR del MS-AR?

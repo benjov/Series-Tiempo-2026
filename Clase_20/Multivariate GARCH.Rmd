@@ -1,0 +1,225 @@
+---
+title: "Multivariate GARCH"
+subtitle: "Series de Tiempo | Semestre 2027-I | FC-UNAM"
+author: "Benjamin Olvida & Omar Alfaro"
+date: "`r format(Sys.Date(), '%B %Y')`"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    theme: flatly
+    code_folding: show
+editor_options:
+  chunk_output_type: inline
+---
+
+## ¿Qué aprenderemos hoy?
+
+Extendemos el análisis GARCH al caso multivariado. El M-GARCH (MGARCH-M) modela simultáneamente las varianzas condicionales de múltiples series y sus covarianzas condicionales, permitiendo analizar cómo la volatilidad de una variable afecta la dinámica de otras.
+
+Al terminar esta clase deberás poder:
+
+1. Especificar y estimar un modelo M-GARCH con `rmgarch` o `MTS`
+2. Interpretar las matrices de varianza-covarianza condicionales y su evolución temporal
+3. Analizar la transmisión de volatilidad entre variables macroeconómicas
+
+---
+
+```{r cars, warning=FALSE}
+#install.packages("dynlm")
+#install.packages("moments")
+#install.packages("broom")
+#install.packages("FinTS")
+#install.packages('rugarch')
+#install.packages("tsbox")
+#install.packages("metRology")
+#install.packages("expm")
+#install.packages("MTS")
+#install.packages("rmgarch")
+#install.packages("Rcpp")
+library(expm)
+library(Matrix)
+library(ggplot2)
+library(quantmod)
+library(moments)
+library(dynlm)
+library(broom)
+library(FinTS)
+library(lubridate)
+library(forecast)
+library(readxl)
+library(MASS)
+library(rugarch)
+library(tsbox)
+library(MTS)
+library(rmgarch)
+library(Rcpp)
+library(plotly)
+library(xts)
+library(zoo)
+
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r, echo=FALSE, warning=FALSE}
+options("getSymbols.warning4.0"=FALSE)
+
+inicio <- as.Date("2020-01-01")
+
+BTC <-getSymbols("BTC-USD", src = "yahoo", from = inicio, auto.assign = FALSE)
+ETH <-getSymbols("ETH-USD", src = "yahoo", from = inicio, auto.assign = FALSE)
+BNB <-getSymbols("BNB-USD", src = "yahoo", from = inicio, auto.assign = FALSE)
+```
+
+```{r}
+
+chartSeries(BTC,TA='addBBands();
+                    addBBands(draw="p");
+                    addVo();
+                    addMACD()', 
+                  
+             # subset='2021',
+                theme="white")
+
+chartSeries(ETH,TA='addBBands();
+                    addBBands(draw="p");
+                    addVo();
+                    addMACD()', 
+                  
+             # subset='2021',
+                theme="white")
+
+chartSeries(BNB,TA='addBBands();
+                    addBBands(draw="p");
+                    addVo();
+                    addMACD()', 
+                  
+             # subset='2021',
+                theme="white")
+```
+
+```{r}
+ln_BTC <- diff(log(BTC$`BTC-USD.Adjusted`))
+ln_ETH <- diff(log(ETH$`ETH-USD.Adjusted`))
+ln_BNB <- diff(log(BNB$`BNB-USD.Adjusted`))
+```
+
+
+```{r }
+
+r_t=cbind(ln_BTC, ln_ETH, ln_BNB)
+
+returns = window(r_t, start = inicio)
+
+```
+
+```{r}
+
+returns <- na.omit(returns)
+colnames(returns) <- c("BTC", "ETH", "BNB")
+
+fechas <- index(returns)
+
+panel_line <- function(y, nombre) {
+  plot_ly() |>
+    add_lines(
+      x = fechas,
+      y = as.numeric(y),
+      name = nombre,
+      showlegend = TRUE,          # <- activar leyenda
+      legendgroup = nombre        # <- agrupa por serie (útil si agregas más trazas)
+    ) |>
+    layout(yaxis = list(title = "Log-returns"))
+}
+
+p_btc <- panel_line(returns$BTC, "BTC")
+p_eth <- panel_line(returns$ETH, "ETH")
+p_bnb <- panel_line(returns$BNB, "BNB")
+
+subplot(p_btc, p_eth, p_bnb,
+        nrows = 3, shareX = TRUE, titleY = TRUE, heights = c(0.34, 0.33, 0.33)) |>
+  layout(
+    title = "Log-returns: BTC, ETH, BNB",
+    xaxis  = list(rangeslider = list(visible = TRUE)),
+    hovermode = "x unified",
+    legend = list(orientation = "h", x = 0, y = 1.02, xanchor = "left", yanchor = "bottom")
+  )
+
+```
+
+```{r}
+# 1) Limpiar y alinear
+colnames(returns) <- c("BTC","ETH","BNB")
+
+# Si descargaste desde "2020-01-01", el primer diff es NA porque falta 2019-12-31.
+# Opción rápida: elimina cualquier fila con NA/Inf
+returns0 <- returns
+returns0 <- returns0[apply(is.finite(returns0), 1, all), ]   # quita NA/NaN/Inf fila a fila
+returns0 <- na.omit(returns0)
+
+stopifnot(NROW(returns0) > 200)  # ten suficientes obs.
+```
+
+
+```{r}
+# 2) Especificación básica univariada
+uspec <- ugarchspec(
+  mean.model     = list(armaOrder = c(0,0), include.mean = TRUE),
+  variance.model = list(model = "sGARCH", garchOrder = c(1,1)),
+  distribution.model = "std"
+)
+```
+
+```{r}
+
+# 3) Verifica que cada univariado converge (clave para detectar la causa)
+u_ok <- lapply(1:NCOL(returns0), function(i) {
+  fit <- try(ugarchfit(uspec, data = returns0[, i], solver = "hybrid"), silent = TRUE)
+  if (inherits(fit, "try-error")) {
+    message(sprintf("Falla en %s: %s", colnames(returns0)[i],
+                    attr(fit, "condition")$message))
+    return(FALSE)
+  } else {
+    return(convergence(fit) == 0)
+  }
+})
+if (!all(unlist(u_ok))) stop("Alguna serie univariada no converge: revisa limpieza/órdenes.")
+
+```
+
+```{r}
+# 4) DCC-GARCH con ajustes que suelen evitar fallos
+mspec   <- multispec(rep(list(uspec), NCOL(returns0)))
+
+dccspec <- dccspec(
+  uspec = mspec,
+  dccOrder = c(1,1),
+  distribution = 'mvt'#"mvnorm"   # más estable que "mvt" si hay problemas de convergencia
+)
+
+dccfit_baseline <- dccfit(
+  dccspec,
+  data = returns0,
+  solver = "solnp",                     # estable para rmgarch
+  fit.control = list(eval.se = FALSE,   # evita fallos por Hessiano
+                     scale   = TRUE)    # estandariza internamente
+)
+
+```
+
+
+```{r}
+
+print(dccfit_baseline)
+```
+
+---
+
+## Ejercicios
+
+1. ¿Cómo evolucionó la covarianza condicional entre la inflación y la depreciación cambiaria durante la crisis financiera de 2008-2009? Grafica la serie de covarianzas condicionales estimadas.
+2. Compara el DCC-GARCH (correlaciones condicionales dinámicas) con el CCC-GARCH (correlaciones constantes). ¿Cuál tiene menor AIC para este conjunto de variables? ¿Cuándo importa usar DCC en lugar de CCC?
+3. Interpreta la significancia estadística de los efectos ARCH y GARCH cruzados en el modelo M-GARCH. ¿Hay evidencia de "spillovers" de volatilidad entre el tipo de cambio y la inflación?

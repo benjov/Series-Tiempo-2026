@@ -1,0 +1,188 @@
+---
+title: "Clase 0. Introducción a las Series de Tiempo"
+subtitle: "Series de Tiempo | Semestre 2027-I | FC-UNAM"
+author: "Benjamin Oliva"
+date: "`r format(Sys.Date(), '%B %Y')`"
+output: html_document
+editor_options:
+  chunk_output_type: inline
+---
+
+## ¿Qué aprenderemos hoy?
+
+Esta sesión introductoria presenta las herramientas básicas para trabajar con
+series de tiempo en R: importación de datos, declaración de objetos `ts` y
+visualización de series económicas mexicanas.
+
+Al terminar esta clase deberías poder:
+
+1. Importar datos desde un archivo `.xlsx` con `readxl`
+2. Declarar una serie de tiempo con `ts()` especificando inicio y frecuencia
+3. Construir gráficas comparativas con el sistema base de R
+4. Aplicar transformaciones básicas: índice base y diferencias logarítmicas
+
+**Datos:** `Base_1_TimeSeries.xlsx`
+**Fuentes:** INEGI, Banxico, Bolsa Mexicana de Valores
+
+---
+
+### Dependencies and Setup
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE,
+                      fig.width = 10, fig.height = 5)
+```
+
+```{r libraries}
+#install.packages("readxl")
+library(readxl)
+```
+
+---
+
+### Carga de datos
+
+Los datos incluidos en `Base_1_TimeSeries.xlsx` son:
+
+| Variable | Descripción |
+|---|---|
+| `IGAE_2018` | Indicador Global de la Actividad Económica, base 2018 |
+| `IGAE_PRIM_2018` | IGAE, Actividades Primarias, base 2018 |
+| `ICC` | Índice de Confianza del Consumidor (puntos) |
+| `ICC_LAG` | ICC comparado con la situación económica hace 12 meses (puntos) |
+| `IPC_BMV` | Índice de Precios y Cotizaciones BMV (base oct-1978 = 0.78) |
+| `TDC` | Tipo de Cambio peso/dólar interbancario (pesos) |
+
+```{r load_data}
+Base_1 <- read_excel("Base_1_TimeSeries.xlsx", sheet = "Hoja 1", col_names = TRUE)
+
+head(Base_1)
+str(Base_1)
+```
+
+---
+
+### Declaración de series de tiempo
+
+```{r declare_ts}
+IGAE_2018      <- ts(Base_1$IGAE_2018,      start = 2002, freq = 12)
+IGAE_PRIM_2018 <- ts(Base_1$IGAE_PRIM_2018, start = 2002, freq = 12)
+ICC            <- ts(Base_1$ICC,            start = 2002, freq = 12)
+ICC_LAG        <- ts(Base_1$ICC_LAG,        start = 2002, freq = 12)
+IPC_BMV        <- ts(Base_1$IPC_BMV,        start = 2002, freq = 12)
+TDC            <- ts(Base_1$TDC,            start = 2002, freq = 12)
+```
+
+---
+
+### Gráfica 1 — IGAE total vs actividades primarias
+
+```{r plot_igae}
+summary(IGAE_2018,      digits = 4)
+summary(IGAE_PRIM_2018, digits = 4)
+
+plot(IGAE_2018, type = "l", lwd = 1, col = "red",
+     ylab = "Índice", xlab = "Tiempo", ylim = c(60, 150))
+par(new = TRUE)
+plot(IGAE_PRIM_2018, type = "l", lwd = 1, col = "blue",
+     ylab = "Índice", xlab = "Tiempo", ylim = c(60, 150))
+legend("topleft", c("IGAE", "IGAE Act. Prim."),
+       cex = 0.8, lty = 1, col = c("red", "blue"))
+par(new = FALSE)
+```
+
+---
+
+### Gráfica 2 — Índice de Confianza del Consumidor
+
+```{r plot_icc}
+summary(ICC,     digits = 4)
+summary(ICC_LAG, digits = 4)
+
+plot(ICC, type = "l", lwd = 1, col = "red",
+     ylab = "Índice", xlab = "Tiempo", ylim = c(29, 55))
+par(new = TRUE)
+plot(ICC_LAG, type = "l", lwd = 1, col = "blue",
+     ylab = "Índice", xlab = "Tiempo", ylim = c(29, 55))
+legend("bottomleft", c("ICC", "ICC lag"),
+       cex = 0.8, lty = 1, col = c("red", "blue"))
+par(new = FALSE)
+```
+
+---
+
+### Gráfica 3 — IPC BMV y Tipo de Cambio (niveles)
+
+```{r plot_ipc_tdc}
+par(mfrow = c(1, 2))
+plot(IPC_BMV, type = "l", lwd = 1, col = "red",
+     ylab = "Índice", xlab = "Tiempo",
+     main = "Índice de Precios y Cotizaciones BMV")
+plot(TDC, type = "l", lwd = 1, col = "blue",
+     ylab = "Pesos por dólar", xlab = "Tiempo",
+     main = "Tipo de Cambio")
+par(mfrow = c(1, 1))
+```
+
+---
+
+### Gráfica 4 — IPC BMV y TDC reindexados (base = enero 2002)
+
+Transformamos ambas series a un número índice con base en el primer mes de
+la muestra para hacerlas comparables en la misma escala.
+
+```{r plot_index}
+IPC_BMV_I <- 100 * IPC_BMV / IPC_BMV[1]
+TDC_I     <- 100 * TDC     / TDC[1]
+
+summary(IPC_BMV_I, digits = 4)
+summary(TDC_I,     digits = 4)
+
+plot(IPC_BMV_I, type = "l", lwd = 1, col = "red",
+     ylab = "Índice (ene-2002 = 100)", xlab = "Tiempo", ylim = c(80, 820))
+par(new = TRUE)
+plot(TDC_I, type = "l", lwd = 1, col = "blue",
+     ylab = "Índice", xlab = "Tiempo", ylim = c(80, 820))
+legend("topleft", c("Índice del IPC", "Índice del TDC"),
+       cex = 0.8, lty = 1, col = c("red", "blue"))
+par(new = FALSE)
+```
+
+---
+
+### Gráfica 5 — Diferencias logarítmicas (variaciones porcentuales)
+
+La diferencia logarítmica $\Delta \ln X_t = \ln X_t - \ln X_{t-1}$ aproxima
+la tasa de variación porcentual de la serie.
+
+```{r plot_difflog}
+par(mfrow = c(3, 1))
+plot(diff(log(IGAE_2018), lag = 1), type = "l", lwd = 1, col = "red",
+     ylab = "Var. %", xlab = "Tiempo",
+     main = "IGAE — Variación porcentual mensual")
+plot(diff(log(IPC_BMV), lag = 1), type = "l", lwd = 1, col = "darkgreen",
+     ylab = "Var. %", xlab = "Tiempo",
+     main = "IPC BMV — Variación porcentual mensual")
+plot(diff(log(TDC), lag = 1), type = "l", lwd = 1, col = "blue",
+     ylab = "Var. %", xlab = "Tiempo",
+     main = "Tipo de Cambio — Variación porcentual mensual")
+par(mfrow = c(1, 1))
+```
+
+---
+
+### Guardado del objeto de datos
+
+```{r save_data}
+save(Base_1, file = "Base_1.RData")
+```
+
+---
+
+## Ejercicios
+
+1. ¿En qué mes y año alcanzó el IPC BMV su valor máximo? Usa `which.max()`.
+2. Calcula la variación porcentual promedio anual del Tipo de Cambio en toda
+   la muestra. ¿En qué periodo fue más volátil?
+3. Aplica `diff(..., lag = 12)` a `IGAE_2018` para obtener la variación anual
+   en lugar de mensual. ¿Cómo cambia la gráfica?

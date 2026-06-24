@@ -1,0 +1,34 @@
+---
+title: "Gpt POC"
+author: "Omar Alfaro"
+date: "2025-08-21"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(openai)
+
+# 🔐 Pon tu API key (mejor en ~/.Renviron)
+#
+Sure, please specify the task you want to be completed.Sys.setenv(OPENAI_API_KEY = "sk-XX")
+```
+
+```{r cars}
+library(openai)
+
+resp <- create_chat_completion(
+  model = "gpt-4o-mini",
+  messages = list(
+    list(role = "user", content = "Dame un chiste corto sobre R.")
+  ),
+  temperature = 0.2   # aquí sí está permitido
+)
+
+txt <- resp$choices$message.content[[1]]
+cat(txt)
+
+```

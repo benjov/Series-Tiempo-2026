@@ -1,0 +1,125 @@
+---
+title: "Introduccion. Simulacion de procesos de ecuaciones de primer y segundo orden"
+subtitle: "Series de Tiempo | Semestre 2027-I | FC-UNAM"
+author: "Benjamin Oliva & Omar Alfaro-Rivera"
+date: "`r format(Sys.Date(), '%B %Y')`"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    theme: flatly
+    code_folding: show
+editor_options:
+  chunk_output_type: inline
+---
+
+## ¿Qué aprenderemos hoy?
+
+Simulamos numéricamente soluciones de ecuaciones en diferencia de primer y segundo orden para visualizar cómo el módulo y signo de las raíces determinan la dinámica del proceso: convergencia, oscilación o explosión.
+
+Al terminar esta clase deberás poder:
+
+1. Escribir la solución general de una ecuación en diferencia de primer orden dado un valor inicial
+2. Identificar el comportamiento asintótico de un proceso según el módulo de su raíz característica
+3. Simular y graficar trayectorias determinísticas con `ggplot2`
+
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+#install.packages("ggplot2")
+#install.packages("readxl")
+#install.packages("dplyr")
+#
+library(ggplot2)
+library(readxl)
+library(dplyr)
+
+```
+
+
+```{r}
+getwd()
+
+#setwd("ruta en su computadora")
+
+getwd()
+```
+
+```{r}
+Diff_Eq <- data.frame(Tiempo = c(0:100))
+
+# El proceso 1:
+Diff_Eq$Process_1 <- 2*(1 - 0.9^Diff_Eq$Tiempo)/(1 - 0.9) + (0.9^Diff_Eq$Tiempo)*10 
+# El proceso 2:
+Diff_Eq$Process_2 <- 2*(1 - (-0.5)^Diff_Eq$Tiempo)/(1 + 0.5) + ((-0.5)^Diff_Eq$Tiempo)*10 
+```
+
+```{r}
+ggplot(data = Diff_Eq, 
+       aes(x = Tiempo, y = Process_1)) + 
+  geom_line(linewidth = 0.5, color = "darkblue") +
+  geom_point(size = 1.0, color = "darkblue") + 
+  #theme_bw() + 
+  theme(legend.position = "none") +
+  theme(legend.title = element_blank()) +
+  guides(col = guide_legend(nrow = 1, byrow = TRUE)) + 
+  xlab("Tiempo") + 
+  ylab("Zt") + 
+  theme(plot.title = element_text(size = 11, face = "bold", hjust = 0)) + 
+  theme(plot.subtitle = element_text(size = 10, hjust = 0)) + 
+  theme(plot.caption = element_text(hjust = 0)) +
+  theme(plot.margin = unit(c(1,1,1,1), "cm")) 
+
+ggsave("G1_PROC_01.png", width = 20, height = 10, units = "cm")
+```
+
+```{r}
+ggplot(data = Diff_Eq, 
+       aes(x = Tiempo, y = Process_2)) + 
+  geom_line(linewidth = 0.5, color = "darkred") +
+  geom_point(size = 1.0, color = "darkred") + 
+  #theme_bw() + 
+  theme(legend.position = "none") +
+  theme(legend.title = element_blank()) +
+  guides(col = guide_legend(nrow = 1, byrow = TRUE)) + 
+  xlab("Tiempo") + 
+  ylab("Zt") + 
+  theme(plot.title = element_text(size = 11, face = "bold", hjust = 0)) + 
+  theme(plot.subtitle = element_text(size = 10, hjust = 0)) + 
+  theme(plot.caption = element_text(hjust = 0)) +
+  theme(plot.margin = unit(c(1,1,1,1), "cm")) 
+#
+#ggsave("G1_PROC_02.png", width = 20, height = 10, units = "cm")
+```
+
+```{r}
+Diff_Eq$Process_3 <- 10 - 450*(0.4)^Diff_Eq$Tiempo + 440*(0.5)^Diff_Eq$Tiempo
+
+# GRAFICA 3
+ggplot(data = Diff_Eq,
+       aes(x = Tiempo, y = Process_3)) +
+  geom_line(linewidth = 0.5, color = "darkgreen") +
+  geom_point(size = 1.0, color = "darkgreen") +
+  #theme_bw() +
+  theme(legend.position = "none") +
+  theme(legend.title = element_blank()) +
+  guides(col = guide_legend(nrow = 1, byrow = TRUE)) +
+  xlab("Tiempo") +
+  ylab("Zt") +
+  theme(plot.title = element_text(size = 11, face = "bold", hjust = 0)) +
+  theme(plot.subtitle = element_text(size = 10, hjust = 0)) +
+  theme(plot.caption = element_text(hjust = 0)) +
+  theme(plot.margin = unit(c(1,1,1,1), "cm"))
+#
+#ggsave("G1_PROC_03.png", width = 20, height = 10, units = "cm")
+```
+
+---
+
+## Ejercicios
+
+1. Modifica el proceso de primer orden usando `a1 = 1.05` (raíz mayor que 1). ¿Qué ocurre con la trayectoria? ¿Qué implicación económica tiene una raíz unitaria mayor a 1?
+2. Para el proceso de segundo orden, encuentra analíticamente los valores de los parámetros para los que el módulo de las raíces complejas es exactamente 1. Verifica gráficamente la trayectoria en ese caso límite.
+3. Agrega una tercera trayectoria al gráfico con raíces reales de módulo menor a 1 (por ejemplo `a1 = 0.5, a2 = 0.3`). Compara la velocidad de convergencia con los dos procesos originales.

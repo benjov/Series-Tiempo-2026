@@ -1,0 +1,289 @@
+---
+title: "Clase_VAR(p) - IRF-Recursivo"
+subtitle: "Series de Tiempo | Semestre 2027-I | FC-UNAM"
+author: "Benjamin Oliva & Luis Gerardo Ruiz González"
+date: "`r format(Sys.Date(), '%B %Y')`"
+output:
+  pdf_document:
+    toc: true
+editor_options:
+  chunk_output_type: inline
+---
+
+## ¿Qué aprenderemos hoy?
+
+Implementamos un VAR estructural recursivo (SVAR con restricciones de corto plazo) aplicando previamente un ajuste estacional X-13 a los datos. El enfoque recursivo de Cholesky es el más sencillo de los esquemas de identificación estructural; en sesiones posteriores veremos restricciones de largo plazo y de signo.
+
+Al terminar esta clase deberás poder:
+
+1. Pre-procesar series con ajuste estacional X-13 antes de estimar un VAR
+2. Estimar un SVAR recursivo usando `SVAR()` con la matriz A de restricciones contemporáneas
+3. Interpretar las IRFs estructurales y compararlas con las IRFs del VAR reducido
+
+**Datos:** `VAR_Recursivo.xlsx`
+
+---
+
+```{r}
+setwd("/Users/gerardoruiz/Desktop/Códigos_Series-Tiempo/VAR Recursivo") # Cambiar a la ruta local
+Sys.setlocale("LC_TIME", "es_ES.UTF-8")
+
+# ===================================================================
+# LIBRERIAS
+# ===================================================================
+
+if (!require(pacman)) install.packages("pacman")
+library(pacman)
+p_load("readxl", "seasonal", "ggplot2", "dplyr", "vars", "svars", "lubridate",
+       "zoo", "tseries", "scales", "stats", "tidyr", "ggthemes")
+
+# ===================================================================
+# DATOS
+# ===================================================================
+
+data <- read_excel("VAR_Recursivo.xlsx")
+
+```
+
+```{r}
+# ===================================================================
+# AJUSTE ESTACIONAL CON X-13
+# ===================================================================
+
+vars_sa <- c("cons", "inv", "inv.p")
+
+for (v in vars_sa) {
+  ts_temp <- ts(
+    data[[v]],
+    start     = c(2008, 12),
+    frequency = 12
+  )
+  data_sa <- seas(ts_temp) 
+  data[[paste0(v, "_sa")]] <- as.numeric(final(data_sa))
+}
+
+# CONSUMO:
+ggplot(data, aes(x=fecha)) + 
+  geom_line(aes(y = cons), colour = "blue") + 
+  geom_line(aes(y = cons_sa), colour = "red")
+
+# INVERSIÓN: 
+ggplot(data, aes(x=fecha)) + 
+  geom_line(aes(y = inv), colour = "blue") + 
+  geom_line(aes(y = inv_sa), colour = "red")
+  
+data <- data %>% 
+  dplyr::select(fecha, cons_sa, inv_sa, inv.p_sa, inc, shad, fix, igae, cetes)
+
+```
+
+```{r}
+# ===================================================================
+# TASAS DE CRECIMIENTO ANUAL: ln(X_t) - ln(X_t-12)
+# ===================================================================
+
+data.ln <- function(data, vars) {
+  for (v in vars) {
+    data[[v]] <- log(data[[v]]) - log(dplyr::lag(data[[v]], 12))
+  }
+  return(data)
+}
+
+vars_ln <- c("cons_sa", "inv_sa", "inv.p_sa", "fix", "igae")
+
+data1 <- data.ln(data, vars_ln) %>% 
+  drop_na()
+
+# CONSUMO:
+ggplot(data1, aes(x=fecha)) + 
+  geom_line(aes(y = cons_sa), colour = "red")
+
+# INVERSIÓN:
+ggplot(data1, aes(x=fecha)) + 
+  geom_line(aes(y = inv_sa), colour = "red")
+
+```
+
+```{r}
+# ===================================================================
+# PRUEBA ADF 
+# ===================================================================
+
+summary(ur.df(data1$cons_sa))
+summary(ur.df(data1$inv_sa))
+summary(ur.df(data1$inv.p_sa))
+summary(ur.df(data1$inc))
+summary(ur.df(data1$shad))
+summary(ur.df(data1$fix))
+summary(ur.df(data1$igae))
+summary(ur.df(data1$cetes))
+
+```
+
+```{r}
+# ===================================================================
+# SELECCIÓN DE REZAGOS Y ESTIMACIÓN DE MODELOS
+# ===================================================================
+
+# CONSUMO:
+VARselect(
+  data1[,c("shad", "inc", "fix", "igae", "cons_sa", "cetes")],
+  lag.max = 6,
+  type = "const")
+
+c.r.var <- vars::VAR(
+  data1[,c("shad", "inc", "fix", "igae", "cons_sa", "cetes")],
+  p      = 2,
+  type   = "const")
+
+c.s.var <- id.chol(c.r.var)
+
+# INVERSIÓN:
+VARselect(
+  data1[,c("shad", "inc", "fix", "igae", "inv.p_sa", "inv_sa", "cetes")],
+  lag.max = 6,
+  type = "const")
+
+i.r.var <- vars::VAR(
+  data1[,c("shad", "inc", "fix", "igae", "inv.p_sa", "inv_sa", "cetes")],
+  p      = 1,
+  type   = "const")
+
+i.s.var <- id.chol(i.r.var)
+
+```
+
+```{r}
+# ===================================================================
+# OPCIÓN A)
+# FUNCIONES IRF CON "ORTHO = TRUE"
+# ===================================================================
+
+# CONSUMO:
+c.irf <- vars::irf(c.r.var, impulse = "inc", response = "cons_sa", 
+                   n.ahead = 36, ortho = TRUE, boot = TRUE, ci = 0.90, 
+                   runs = 1000)
+
+m.c.irf <- as.data.frame(c.irf$irf$inc)
+colnames(m.c.irf)[1] <- c("resp")
+l.c.irf <- as.data.frame(c.irf$Lower$inc)
+colnames(l.c.irf)[1] <- c("low")
+u.c.irf <- as.data.frame(c.irf$Upper$inc)
+colnames(u.c.irf)[1] <- c("upp")
+
+df.c.irf <- cbind(m.c.irf, l.c.irf, u.c.irf)
+df.c.irf$time <- seq(from = 0, 
+                     to = 36, 
+                     by = 1)
+
+irf.c <- ggplot(df.c.irf, aes(x = time)) + 
+  geom_ribbon(aes(ymin = low, ymax = upp), fill = "gray", 
+              alpha = 0.6) + 
+  geom_hline(aes(yintercept = 0), colour = "black", linewidth = 1) + 
+  geom_line(aes(y = resp), colour = "red", linetype = "solid", 
+            linewidth = 1.5) + 
+  scale_y_continuous(breaks = seq(-.014, .002, by = .002), 
+                     limits = c(-.014, .002),
+                     labels = label_percent(accuracy = .1)) +
+  scale_x_continuous(breaks = seq(from = 0, 
+                                  to = 36, 
+                                  by = 2)) +
+  labs(title = "", x = NULL, y = "") +
+  theme_classic() +
+  theme(
+    axis.text = element_text(family = "Arial", size = 14, colour = "black", 
+                             face = "bold"),
+    axis.title = element_text(family = "Arial", size = 14, face = "bold"),
+    panel.background = element_rect(fill = "#d8eaf0", colour = NA),
+    plot.background = element_rect(fill = "#d8eaf0", colour = NA),
+    axis.line = element_line(linewidth = 1, colour = "black"),
+    axis.ticks = element_line(linewidth = 1, colour = "black"))
+irf.c
+
+# INVERSIÓN:
+i.irf <- vars::irf(i.r.var, impulse = "inc", response = "inv_sa", 
+                   n.ahead = 36, ortho = TRUE, boot = TRUE, ci = 0.90, 
+                   runs = 1000)
+
+m.i.irf <- as.data.frame(i.irf$irf$inc)
+colnames(m.i.irf)[1] <- c("resp")
+l.i.irf <- as.data.frame(i.irf$Lower$inc)
+colnames(l.i.irf)[1] <- c("low")
+u.i.irf <- as.data.frame(i.irf$Upper$inc)
+colnames(u.i.irf)[1] <- c("upp")
+
+df.i.irf <- cbind(m.i.irf, l.i.irf, u.i.irf)
+df.i.irf$time <- seq(from = 0, 
+                     to = 36, 
+                     by = 1)
+
+irf.i <- ggplot(df.i.irf, aes(x = time)) + 
+  geom_ribbon(aes(ymin = low, ymax = upp), fill = "gray", 
+              alpha = 0.6) + 
+  geom_hline(aes(yintercept = 0), colour = "black", linewidth = 1) + 
+  geom_line(aes(y = resp), colour = "red", linetype = "solid", 
+            linewidth = 1.5) + 
+  scale_y_continuous(breaks = seq(-.014, .002, by = .002), 
+                     limits = c(-.014, .002),
+                     labels = label_percent(accuracy = .1)) +
+  scale_x_continuous(breaks = seq(from = 0, 
+                                  to = 36, 
+                                  by = 2)) +
+  labs(title = "", x = NULL, y = "") +
+  theme_classic() +
+  theme(
+    axis.text = element_text(family = "Arial", size = 14, colour = "black", 
+                             face = "bold"),
+    axis.title = element_text(family = "Arial", size = 14, face = "bold"),
+    panel.background = element_rect(fill = "#d8eaf0", colour = NA),
+    plot.background = element_rect(fill = "#d8eaf0", colour = NA),
+    axis.line = element_line(linewidth = 1, colour = "black"),
+    axis.ticks = element_line(linewidth = 1, colour = "black"))
+irf.i
+
+```
+
+```{r}
+# ===================================================================
+# OPCIÓN B)
+# FUNCIONES IRF CON "SVARS"
+# ===================================================================
+
+# Identificamos los choques estructurales con "id.chol":
+
+# CONSUMO:
+c.svar <- id.chol(c.r.var)
+summary(c.svar)
+
+# INVERSIÓN:
+i.svar <- id.chol(i.r.var)
+summary(i.svar)
+
+```
+
+```{r}
+# ===================================================================
+# IRF OPCIÓN B)
+# ===================================================================
+
+# Graficamos las IRF con bandas de confianza:
+
+# CONSUMO:
+cores <- parallel::detectCores() - 1
+boot.c.svar <- wild.boot(c.svar, n.ahead = 36, nboot = 1000, nc = cores)
+plot(boot.c.svar)
+
+# INVERSIÓN:
+cores <- parallel::detectCores() - 1
+boot.i.svar <- wild.boot(i.svar, n.ahead = 36, nboot = 1000, nc = cores)
+plot(boot.i.svar)
+
+```
+
+---
+
+## Ejercicios
+
+1. ¿Por qué es necesario desestacionalizar las series antes de estimar el VAR? ¿Qué problema causaría estimar el VAR con las series originales si tienen estacionalidad determinística?
+2. Modifica el ordenamiento recursivo del SVAR: coloca `inv.p` antes que `inv`. ¿Cambian las IRFs estructurales? Discute qué supuesto económico implica cada ordenamiento.
+3. Compara las IRFs del SVAR recursivo con las del VAR reducido (identificación de Cholesky estándar). ¿Cuándo coinciden y cuándo difieren?

@@ -1,0 +1,131 @@
+---
+title: "Clase 0.5:  Toolbox e introducción a RMarkDown"
+subtitle: "Series de Tiempo | Semestre 2027-I | FC-UNAM"
+author: "Omar Alfaro-Rivera"
+date: "`r format(Sys.Date(), '%B %Y')`"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    theme: flatly
+    code_folding: show
+editor_options:
+  chunk_output_type: inline
+---
+
+## ¿Qué aprenderemos hoy?
+
+Esta sesión cubre las herramientas tecnológicas del curso: el entorno de trabajo (R + RStudio), los formatos de archivo que usaremos y alternativas en la nube para ejecutar código R sin instalación local.
+
+Al terminar esta clase deberás poder:
+
+1. Distinguir entre R (el lenguaje) y RStudio (el IDE) y configurar tu entorno de trabajo
+2. Crear y renderizar archivos R Markdown (.Rmd) para combinar código, resultados y texto
+3. Ejecutar código R en Google Colab cuando no tengas acceso a una instalación local
+
+---
+
+## Toolbox
+
+### R y R Studio
+
+Hay una distinción importante entre *R* y *R Studio* que muchas veces no es suficientemente clara. Básicamente R se trata del lenguaje de programación que se encarga de computar todas las intrucciones que se señalen, mientras que R Studio es el medio "amable" a través del cual podemos visualizar los resultados de las sentencias que realicemos mediante este lenguaje.
+
+#### Instalación
+
+Para instalar *R* es necesario visitar [este enlace](https://cran.r-project.org/bin/windows/base/) en caso de ser usuario de *Windows* y visitar [este enlace](https://cran.r-project.org/bin/macosx/) en caso de usar MAC, esto para descargar y posteriormente instalar. En el caso de *R Studio* en ambos casos es necesario visitar [esta página](https://www.rstudio.com/products/rstudio/download/) y descargar la opción marcada como "RStudio Desktop FREE".
+
+Al ejecutar ambos programas de instalación, a menos que se tenga una idea clara de lo que se están haciendo, lo recomendable es seleccionar todas las opciones de instalación seleccionadas por defecto.
+
+#### Tipos de archivos
+
+Uno de los aspectos que vuelven tan valiosa una herramienta como *R*, es la facilidad con que nos permite una perfecta replicabilidad de nuestras investigaciones o trabajos académicos. En este sentido, el valor de las intrucciones que generamos tienen mucho más valor una vez que tenemos la posibilidad de generar un código que funcione basicamente desde cualquier computadora. Hay dos opciones muy populares para este objetivo.
+
+-   Script de R: este tipo de archivos (terminación .R) guarda una serie de instrucciones, el único producto que generan es la llamada de cada línea de Código dentro de la consola.
+
+-   R Markdown: este tipo de archivo (terminación .Rmd) a la vez que nos permiten llamar lineas de código que se ejecutan en la consola, permite mezclarlo con líneas de texto en *Mark Down* que produce archivos en formatos que facilmente se pueden compartir como *html*, *pdf* o *MS word*.
+
+### Google Colab
+
+Existe una opción adicional en la que podemos trabajar con *R*. Idealmente no es la primera opción que consideramos, pero es de mucha ayuda cuando nos encontramos trabajando en una maquina con una limitada capacidad de procesamiento o en un ambiente de trabajo como android o un sistema que se le parezca.
+
+Esta opción es un ambiente brindado por [*Google*](https://colab.research.google.com/) y que en principio está diseñado para trabajar con *Python*, sin embargo actualmente existen librerías con las cuales podemos copilar código de *R* desde un entorno de trabajo de Python, por lo que el material de la clase también se brinda bajo esta opción.
+
+-   Notebook: este tipo de archivos (terminación .ipybn) permiten copilar código a la vez que dan la posibilidad de realizar notas mediante el lenguaje de marcado de texto *Mark Down*.
+
+La manera más sencilla de utilizar esta opción es instalar en el navegador google chrome la extensión de *Colab*, abrir la página donde se encuentra el archivo .ipynb y presionar la extensión de Colab.
+
+Cabe señalar que para hacer uso de esta opción es necesario tener una cuenta de google. Una desventaja de esta opción es que en cada sesión debemos de instalar las librerías que utilizaremos.
+
+### Git y Github
+
+Git es un software especializado en el control de versiones. Los entornos de trabajo *Unix* y *Linux*, al ser ambientes de trabajo ideales para programadores, ya tienen preinstalado *git*. En el caso de *Windows* es necesario realizar la instalación de [Git Bash](https://gitforwindows.org/).
+
+Dicho lo anterior, [GitHub](https://github.com/) viene a ser una red social de desarrolladores que pueden compartir sus proyectos y alojarlos en la nube. Es de gran utilidad en los emprendimientos de carácter colaborativo, como es el caso de esta clases, en la que tras una serie de pasos es posible que siempre se aseguren de tener la última versión de los archivos que estaremos utilizando.
+
+1)  Al abrir la consola (en el caso de Windows puede ser bash y omitir este primer paso) escribir la sentencia: git
+
+2)  Cambiar el directorio de trabajo, esto se consigue escribiendo: *cd "la carpeta donde pretenden alojar los archivos de la clase"*
+
+3)  Clonar el repositorio en la nube dentro de nuestra máquina: git clone "<https://github.com/benjov/Series-de-Tiempo-2022>"
+
+4)  Como podremos notar, esto crea una nueva carpeta a la cual podemos acceder con la sentencia: cd . Series-de-Tiempo-2021
+
+5)  Finalmente cada que deseemos actualizar los archivos con la conexión con nuestro repositorio remoto, bastará con ir a la ubicación de la carpeta con el domando *cd* y escribir: git pull
+
+## R Markdown
+
+Básicamente la estrucura para declarar encabezados, es utilizar hash (\#) al inicio, la estructura base es que el número de estos símbolos explicar la importancia Gerarquica de nuestro encabezado.
+
+### R Markdown
+
+#### R Markdown
+
+##### R Markdown
+
+En el caso de las listas, basta con poner un asterisco (\*), espacio y posteriormente la oración o el texto, para hacer notar que queremos plasmar una lista.
+
+-   Esta es
+-   Una lista
+
+Para resaltar algunas partes del texto podemos valernos del guión bajo, una oración dentro de guiones bajos se tomará como itálicas y con dos guiones bajo de cada lato se toma como negritas.
+
+*Estas son Italicas*
+
+**Estas son negritas**
+
+Las ecuaciones son uno de los atractivos más grandes de MarkDown, dado que el producto que podemos escribir es muy estético. Este aspecto tiene muchas opciones y detalles, para una descripción más profunda se recomienta visitar [esta página](http://csrgxtu.github.io/2015/03/20/Writing-Mathematic-Fomulars-in-Markdown/), sin embargo simplemente basta con hacer una delcaración entre signos de moneda para que MarkDown entienda que se trata de una ecuación
+
+Ecuación: $Y = \beta_0+\beta_iX_i+\hat{e}_i$
+
+Una de las razones principales por las que utilizaremos R Markdown para esta clase, es básicamente por la ventaja que significa poder mantener pedazos ( *chunks* ) de código dentro de las notas. Esto permite realizar una varidad enorme de archivos producidos desde R.
+
+```{r chunk 1, echo=FALSE}
+#Este es un chunk con echo = FALSE
+
+X = seq(1:1000)
+Y = sqrt(X)
+plot(X,Y)
+```
+
+```{r chunk 2, include=FALSE}
+#Este es un chunk sin echo = FALSE
+
+X = seq(1:100000)
+Y = sqrt(X)
+plot(X,Y)
+```
+
+## Stack Overflow y Chat GPT
+
+A la hora de empezar a programar, es más común que nuestro código obtenga como resultado un error a que obtengamos el resultado esperado. Existen distintos sitios de internet con documentación, tutoriales o foros de preguntas y respuestas, pero el foro por excelencia donde es muy probable que encontremos la respuesta a la duda que nos enfrentamos, es \*\*Stack Overflow\*\* .
+
+Por otro lado, **Chat GPT** una nueva teconlogía que puede ser de mucha utilidad para entender el error que produce nuestro código, incluso en ciertos aspectos es una herramienta que puede ayudarnos a optimizar nuestro código.
+
+---
+
+## Ejercicios
+
+1. Crea un archivo .Rmd nuevo, agrega un chunk de código que calcule la suma de 1 a 100, y renderízalo como HTML. ¿Qué opciones del chunk usarías para ocultar el código pero mostrar el resultado?
+2. Abre el archivo `basic_gpt_setup.Rmd` de esta misma carpeta. ¿Qué librería usa para conectarse a OpenAI? ¿Qué parámetros requiere la llamada `create_chat_completion()`?
+3. Instala el paquete `here` y úsalo para construir una ruta a un archivo de datos hipotético en la carpeta `Clase_03/`. ¿Por qué `here::here()` es preferible a `setwd()`?

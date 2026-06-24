@@ -1,0 +1,218 @@
+---
+title: "Multivariate GARCH"
+subtitle: "Series de Tiempo | Semestre 2027-I | FC-UNAM"
+author: "Benjamin Olvida & Omar Alfaro"
+date: "`r format(Sys.Date(), '%B %Y')`"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    theme: flatly
+    code_folding: show
+editor_options:
+  chunk_output_type: inline
+---
+
+## ¿Qué aprenderemos hoy?
+
+Este notebook es un ejemplo complementario de M-GARCH aplicado a un conjunto de datos adicional. Se usa como material de práctica para reforzar los conceptos del notebook principal de esta clase.
+
+Al terminar esta clase deberás poder:
+
+1. Replicar el flujo completo de estimación M-GARCH con un nuevo conjunto de datos
+2. Comparar los resultados con los del notebook principal e identificar similitudes y diferencias
+3. Adaptar el código a datos propios
+
+---
+
+# MGARCH-M
+
+En este R-Markdown se realiza un análisis empírico de la relación de las medias y varianzas condicionales de las tasas de depreciación cambiaria, inflación y crecimiento del producto para México utilizando un modelo multivariado de heterocedasticidad condicional (MGARCH-M). 
+
+El estudio utiliza datos mensuales para el periodo 1993-2009. Los resultados obtenidos apoyan la existencia de una relación positiva entre la tasa de depreciación cambiaria y su volatilidad, así como de un efecto negativo de la incertidumbre cambiaria sobre la tasa de crecimiento del producto.
+
+### Dependencies and Setup
+```{r setup, include = FALSE, warning = FALSE, message = FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE)
+
+# 
+library(ggplot2)
+library(dplyr)
+library(stats)
+library(lmtest)
+library(foreign)
+library(readxl)
+library(plm)
+library(tidyr)
+library(MASS)
+library(rmgarch)
+library(parallel)
+
+options(scipen = 4)
+
+```
+
+## Data
+
+```{r, echo=FALSE, warning=FALSE}
+
+Data = read_excel("Datos_1200_V2.xls")
+
+head(Data)
+
+```
+
+## Función de Verosimilirud
+
+```{r}
+llk_M_Garch_M_V1 <- function(B, Yt, Yt_1, Yt_2, Yt_3, Zt) {
+  #
+  T <- nrow(Yt)
+  N <- ncol(Yt)
+  one <- matrix(1, T, N)
+  #
+  resid <- Yt - matrix(rep(matrix(B[1:3], 1, N, byrow = TRUE), each = 10), nrow = T, ncol = N) -
+    t(matrix(c(B[4], B[5], B[6], B[13], B[14], B[15], B[22], B[23], B[24]), N, N, byrow = TRUE) %*% t(Yt_1)) -
+    t(matrix(c(B[7], B[8], B[9], B[16], B[17], B[18], B[25], B[26], B[27]), N, N, byrow = TRUE) %*% t(Yt_2)) -
+    t(matrix(c(B[10], B[11], B[12], B[19], B[20], B[21], B[28], B[29], B[30]), N, N, byrow = TRUE) %*% t(Yt_3)) - 
+    t(matrix(c(B[55], B[58], B[56], B[59], B[57], B[60]), N, 2) %*% t(Zt))
+  #
+  Ht <- unlist(cov(resid))
+  #
+  Ut1 <- unlist( Yt[1,1] - B[1] - matrix(B[4:6], 1, N, byrow = TRUE) %*% t(Yt_1[1, ]) - 
+    matrix(B[7:9], 1, N, byrow = TRUE) %*% t(Yt_2[1, ]) - 
+    matrix(B[10:12], 1, N, byrow = TRUE) %*% t(Yt_3[1, ]) - 
+    matrix(B[31:33], 1, N, byrow = TRUE) %*% diag(Ht)^0.5 - 
+    B[55]*Zt[1,1] - B[58]*Zt[1,2] )
+  #
+  Ut2 <- unlist( Yt[1,2] - B[2] - matrix(B[13:15], 1, N, byrow = TRUE) %*% t(Yt_1[1, ]) - 
+    matrix(B[16:18], 1, N, byrow = TRUE) %*% t(Yt_2[1, ]) - 
+    matrix(B[19:21], 1, N, byrow = TRUE) %*% t(Yt_3[1, ]) - 
+    matrix(B[34:36], 1, N, byrow = TRUE) %*% diag(Ht)^0.5 - 
+    B[56]*Zt[1,1] - B[59]*Zt[1,2] )
+  #
+  Ut3 <- unlist( Yt[1,3] - B[3] - matrix(B[22:24], 1, N, byrow = TRUE) %*% t(Yt_1[1, ]) - 
+    matrix(B[25:27], 1, N, byrow = TRUE) %*% t(Yt_2[1, ]) - 
+    matrix(B[28:30], 1, N, byrow = TRUE) %*% t(Yt_3[1, ]) - 
+    matrix(B[37:39], 1, N, byrow = TRUE) %*% diag(Ht)^0.5 - 
+    B[57]*Zt[1,1] - B[60]*Zt[1,2] )
+  #
+  LLK <- 0
+  #
+  for (t in 2:T) {
+    #
+    S2t1 <- unlist( B[40] + B[43]*Ut1^2 + B[46]*Ht[1,1] + B[49]*Yt[t-1,1] )
+    S2t2 <- unlist( B[41] + B[44]*Ut2^2 + B[47]*Ht[2,2] + B[50]*Yt[t-1,2] )
+    S2t3 <- unlist( B[42] + B[45]*Ut3^2 + B[48]*Ht[3,3] + B[51]*Yt[t-1,3] )
+    S2t12 <- unlist( B[52]*sqrt(S2t1*S2t2) )
+    S2t13 <- unlist( B[53]*sqrt(S2t1*S2t3) )
+    S2t23 <- unlist( B[54]*sqrt(S2t2*S2t3) )
+    #
+    Ut1 <- unlist( Yt[t,1] - B[1] - matrix(B[4:6], 1, N, byrow = TRUE) %*% t(Yt_1[t, ]) - 
+      matrix(B[7:9], 1, N, byrow = TRUE) %*% t(Yt_2[t, ]) - 
+      matrix(B[10:12], 1, N, byrow = TRUE) %*% t(Yt_3[t, ]) - 
+      matrix(B[31:33], 1, N, byrow = TRUE) %*% diag(Ht)^0.5 - 
+      B[55]*Zt[t,1] - B[58]*Zt[t,2] )
+    #
+    Ut2 <- unlist( Yt[t,2] - B[2] - matrix(B[13:15], 1, N, byrow = TRUE) %*% t(Yt_1[t, ]) - 
+      matrix(B[16:18], 1, N, byrow = TRUE) %*% t(Yt_2[t, ]) - 
+      matrix(B[19:21], 1, N, byrow = TRUE) %*% t(Yt_3[t, ]) - 
+      matrix(B[34:36], 1, N, byrow = TRUE) %*% diag(Ht)^0.5 - 
+      B[56]*Zt[t,1] - B[59]*Zt[t,2] )
+    #
+    Ut3 <- unlist( Yt[t,3] - B[3] - matrix(B[22:24], 1, N, byrow = TRUE) %*% t(Yt_1[t, ]) - 
+      matrix(B[25:27], 1, N, byrow = TRUE) %*% t(Yt_2[t, ]) - 
+      matrix(B[28:30], 1, N, byrow = TRUE) %*% t(Yt_3[t, ]) - 
+      matrix(B[37:39], 1, N, byrow = TRUE) %*% diag(Ht)^0.5 - 
+      B[57]*Zt[t,1] - B[60]*Zt[t,2] )
+    #
+    Ut <- unlist( matrix(c(Ut1, Ut2, Ut3), 1, N, byrow = TRUE) )
+    #
+    Ht <- unlist( matrix(c(S2t1, S2t12, S2t13, S2t12, S2t2, S2t23, S2t13, S2t23, S2t3), N, N, byrow = TRUE) )
+    #
+    llkt <- - (N/2)*log(2*pi) - (1/2)*log(max(1e-10,det(Ht))) - (1/2)*(max(1e-10,Ut %*% ginv(Ht) %*% t(Ut)))
+    #
+    llkt <- -llkt
+    LLK <- LLK + llkt
+    # print(Ht)
+    # print(ginv(Ht))
+    # print( Ut %*% ginv(Ht) %*% t(Ut) )
+    # print(t)
+    print(LLK)
+  }
+  #
+  llkGARCHM <- LLK
+  return(llkGARCHM)
+}
+
+```
+
+```{r}
+#
+  Y = Data[ , c('DLIGAE_MX1200', 'DLPPI_MX1200', 'DLTC1200')]
+  
+  Z = Data[ , c('DLIP_US1200', 'DLOILP1200')]
+
+  # Definir el número de rezagos
+  L <- 3  # Ajustar según sea necesario
+
+  # Tamaño de Y
+  T <- nrow(Y)
+
+  # Crear matrices rezagadas
+  Yt <- Y[(L+1):T, ]
+  Zt <- Z[L:(T-1), ]
+  Yt_1 <- Y[L:(T-1), ]
+  Yt_2 <- Y[(L-1):(T-2), ]
+  Yt_3 <- Y[(L-2):(T-3), ]
+
+  # Definir parámetros iniciales (ajustar según sea necesario)
+  B1 <- c(2, 4, 7)
+  B11 <- c(-0.10, -0.24, -0.03, -0.01, 0.02, -0.06, -0.06, 0.12, -0.02)
+  B12 <- c(0.00, 0.29, 0.05, 0.02, 0.12, 0.03, 0.00, 0.14, 0.01)
+  B13 <- c(-0.22, 0.01, 0.12, -0.04, 0.31, -0.16, 0.01, -0.33, 0.03)
+  Theta <- c(0.62, -0.5, -0.5, 0.5, 1.19, 0, 0, 0, 0.17)
+  Alpha <- c(80, 60, 639.08, 0.39, 0.71, 0.35, 0.05, 0.21, 0.12, 0.13, 3.40, 24.56)
+  Corr <- c(0.13, -0.04, 0.56)
+  Psi <- c(0.46, 0.17, 0.21, 0.01, -0.00, -0.03)
+
+  # Concatenar todos los parámetros iniciales
+  B0 <- c(B1, B11, B12, B13, Theta, Alpha, Corr, Psi)
+
+  # Definir la función objetivo
+  L <- function(B) {
+    -llk_M_Garch_M_V1(B, Yt, Yt_1, Yt_2, Yt_3, Zt)
+  }
+
+  # Opciones de optimización
+  options <- list(reltol = 1e-10)
+
+  # Optimización
+  optim_result <- optim(B0, L, gr = "BFGS",
+                        method = "Nelder-Mead", control = options)
+
+  # Extraer resultados
+  BetaGARCH <- optim_result$par
+  llk <- -optim_result$value
+  hessian <- optim_result$hessian
+
+  # Calcular varianzas, desviaciones estándar y estadísticas t
+  VarGARCH <- solve(hessian)
+  seGARCH <- sqrt(diag(VarGARCH))
+  t_values <- BetaGARCH / seGARCH
+  p_values <- 2 * (1 - pnorm(abs(t_values)))
+
+  # Crear la matriz final de resultados
+  B <- cbind(BetaGARCH, seGARCH, t_values, p_values)
+  list(coefficients = B, log_likelihood = llk)
+
+
+```
+
+---
+
+## Ejercicios
+
+1. ¿Cuántas observaciones tiene el dataset `Datos_1200_V2.xls`? ¿Qué variables incluye? Describe brevemente las series antes de modelarlas.
+2. Compara los coeficientes GARCH estimados en este ejemplo con los del notebook principal (`Multivariate GARCH.Rmd`). ¿Son similares los parámetros de persistencia?
+3. Genera gráficas de las varianzas condicionales estimadas e identifica visualmente los periodos de mayor volatilidad en el dataset.

@@ -1,0 +1,222 @@
+---
+title: "Clase 12. Filtro HP"
+subtitle: "Series de Tiempo | Semestre 2027-I | FC-UNAM"
+author: "Benjamin Oliva & Omar Alfaro-Rivera"
+date: "`r format(Sys.Date(), '%B %Y')`"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    theme: flatly
+    code_folding: show
+editor_options:
+  chunk_output_type: inline
+---
+
+## ¿Qué aprenderemos hoy?
+
+Aplicamos el filtro Hodrick-Prescott (HP) para descomponer las series macroeconómicas en una componente de tendencia (crecimiento de largo plazo) y una componente cíclica (fluctuaciones alrededor de la tendencia). Este filtro es ampliamente usado en macroeconomía para medir brechas del producto.
+
+Al terminar esta clase deberás poder:
+
+1. Aplicar `hpfilter()` del paquete `mFilter` y extraer el ciclo y la tendencia
+2. Seleccionar el parámetro de suavizamiento λ según la frecuencia de los datos (100 anual, 1600 trimestral, 14400 mensual)
+3. Interpretar la brecha del producto como la diferencia porcentual entre el PIB observado y su tendencia HP
+
+**Datos:** `Datos_Ad.RData` — INPC, TC, CETE28 e IGAE originales y ajustados por estacionalidad (generado en Clase_11)
+
+---
+
+### Dependencies and Setup
+```{r setup, include = FALSE, warning = FALSE, message = FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+#install.packages("ggplot2")
+#install.packages("dplyr")
+#install.packages("readxl")
+#install.packages(stats)
+#install.packages("mFilter")
+#install.packages("plm")
+# 
+library(ggplot2)
+library(dplyr)
+library(readxl)
+library(stats)
+library(mFilter)
+library(plm)
+```
+## Filtro Hodrick & Prescott (1997)
+
+El articulo original es una discusion respecto de como modelar la brecha del PIB: "Modelling the output gap - Hodrick-Prescott filter". Estos modelos fueron desarrollados por Hodrick & Prescott (1997), quienes sugieren algunos valores - constantes - para el coeficiente de castigo por desviaciones respecto de la trayectoria de largo plazo ($\lambda$):
+
+* $\lambda$ = 100 for yearly data
+* $\lambda$ = 1600 for quarterly data
+* $\lambda$ = 14400 for monthly data
+
+# Importamos Datos desde un archivo de R:
+
+Los datos "cargados" son los originales y los ajustados por estacionalidad. Los cuales son:
+
+* INPC: Indice Nacional de Precios al Consumidor (2QJul2018 = 100)
+
+* TC: Tipo de Cambio FIX 
+
+* CETE28: Tasa de rendimiento promedio mensual de los Cetes 28, en por ciento anual
+
+* IGAE: Indicador global de la actividad económica (2013 = 100)
+
+* IPI: Industrial Production Index (2012 = 100)
+
+```{r }
+
+load("../data/Datos_Ad.RData")
+
+head(Datos_Ad)
+
+```
+
+## Conversion a series de tiempo:
+
+```{r }
+
+INPC <- ts(Datos_Ad$INPC_Ad, start = c(2000, 1), freq = 12)
+
+TC <- ts(Datos_Ad$TC_Ad, start = c(2000, 1), freq = 12)
+
+```
+
+## Filtro Hodrick-Prescott:
+
+### INPC:
+
+```{r }
+
+#?hpfilter
+
+INPC_hpf <- hpfilter(INPC, freq = 14400)
+
+names(INPC_hpf)
+
+```
+
+```{r }
+
+INPC_hpf$cycle
+
+INPC_hpf$trend
+
+INPC_hpf$lambda
+
+INPC_hpf$x
+
+```
+
+```{r }
+
+plot(INPC_hpf)
+
+INPC_Cycle <- INPC_hpf$cycle
+
+INPC_Trend <- INPC_hpf$trend
+
+```
+
+### TC:
+
+```{r }
+
+TC_hpf <- hpfilter(TC, freq = 14400)
+
+plot(TC_hpf)
+
+TC_Cycle <- TC_hpf$cycle
+
+TC_Trend <- TC_hpf$trend
+
+```
+
+# DataFrame:
+
+```{r }
+
+Datos_HPF <- cbind(Datos_Ad$FECHA, 
+                  data.frame(cbind(INPC, 
+                                   INPC_Trend, 
+                                   INPC_Cycle, 
+                                   TC, 
+                                   TC_Trend, 
+                                   TC_Cycle)))
+```
+
+# Hodrick-Prescott planteado por St-Amant & van Norden
+
+Método modificado de HP consiste en minimizar los valores de la serie $\{ \tau_t \}_{t=1}^T$:
+$$\sum_{t=1}^T (y_t - \tau_t)^2 + \lambda \sum_{t=2}^{T-1} [(\tau_{t+1} - \tau_t) - (\tau_t - \tau_{t-1})]^2 + \lambda_{ss} \sum_{t=T-j}^{T} [\Delta \tau_t - u_{ss}]$$
+
+Donde $\lambda$ es una parámetro fijo (determinado ex-ante), $\tau_t$ es un componente de tendencia de $y_t$, y los nuevos parámetros son $u_{ss}$ y $\lambda_{ss}$ ajustadas por el procedimiento de Marcet y Ravn (2004).
+
+Este procedimiento asume que parte del filtro HP y que esta versión tiene el problema de pérdida de información al final y al principio de la muestra. La razón es que es un procedimeinto univariado que requiere de mucha información futura y pasada para mejorar el ajuste.
+
+El compoenente adicional al filtro HP es un componente de castigo por desviaciones de la tasa de crecimiento de largo plazo, $u_{ss}$.
+
+El proceso de selección de $\lambda_{ss}$ es e propuesto por Marcet y Ravn (2004), el cual consiste en utilizar un $\lambda$ convencional y el filtro HP convencional para estimar la siguiente función:
+$$F(\lambda) = \frac{\sum_{t=2}^{T-1} ((\tau_{t+1} - \tau_t) - (\tau_t - \tau_{t-1}))^2}{\sum_{t=1}^T (y_t - \tau_t)^2}$$
+
+Entonces el valor de $\lambda_{ss}$ será aquel que:
+$$F(\lambda_{ss}) = \frac{\sum_{t=2}^{T-1} ((\tau_{t+1} - \tau_t) - (\tau_t - \tau_{t-1}))^2}{\sum_{t=1}^T (y_t - \tau_t)^2} = F(\lambda)$$
+
+nota: Antón (2009) estimó $\lambda_{ss} = 1096$ para datos trimestrales del PIB.
+
+```{r }
+
+st_amant_van_norden_filter <- function(ts_data) {
+  
+  # Calculate the variance of the series
+  variance <- var(ts_data)
+  
+  # Calculate the first difference of the series
+  diff_ts <- diff(ts_data)
+  
+  # Calculate the variance of the first difference of the series
+  variance_diff <- var(diff_ts)
+  
+  # Calculate lambda based on the St-Amant and Van Norden formula
+  lambda <- variance / variance_diff
+  
+  # Apply the Hodrick-Prescott filter with the computed lambda
+  HP_Filter_StAmantVanNorden <- hpfilter(ts_data, freq = lambda)
+  
+  return(HP_Filter_StAmantVanNorden)
+}
+
+```
+
+### Aplicando a una serie:
+
+```{r }
+
+IGAE <- ts(Datos_Ad$IGAE, start = c(2000, 1), freq = 12)
+
+st_amant_van_norden_filter(IGAE)
+
+```
+
+```{r }
+
+IGAE_hpf_SAvN <- st_amant_van_norden_filter(IGAE)
+
+plot(IGAE_hpf_SAvN)
+
+IGAE_Cycle <- IGAE_hpf_SAvN$cycle
+
+IGAE_Trend <- IGAE_hpf_SAvN$trend
+
+```
+
+---
+
+## Ejercicios
+
+1. Aplica el filtro HP al IGAE desestacionalizado con λ=1600 y luego con λ=14400. Grafica los dos ciclos resultantes en el mismo panel. ¿Cómo afecta λ a la suavidad de la tendencia y la amplitud del ciclo?
+2. ¿Cuál es el argumento principal de Ravn & Uhlig (2002) sobre la elección de λ? Busca en qué se basa la regla λ_mensual = λ_trimestral × 3⁴ y verifícala numéricamente.
+3. Calcula la correlación entre el ciclo del IGAE y el ciclo del Tipo de Cambio (ambos extraídos con HP). ¿Son contracíclicos? ¿En qué periodos divergen más?

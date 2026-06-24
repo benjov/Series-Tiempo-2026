@@ -1,0 +1,135 @@
+---
+title: "Multivariate GARCH CAse 2"
+subtitle: "Series de Tiempo | Semestre 2027-I | FC-UNAM"
+author: "Benjamin Olvida & Omar Alfaro"
+date: "`r format(Sys.Date(), '%B %Y')`"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    theme: flatly
+    code_folding: show
+editor_options:
+  chunk_output_type: inline
+---
+
+## ¿Qué aprenderemos hoy?
+
+Aplicamos el M-GARCH a datos de mercado en tiempo real: el índice bursátil S&P500 y el tipo de cambio peso/dólar. Este ejemplo ilustra cómo la incertidumbre del mercado financiero internacional (medida por la volatilidad del S&P500) se transmite a la volatilidad del tipo de cambio mexicano.
+
+Al terminar esta clase deberás poder:
+
+1. Descargar y sincronizar series financieras de distintas fuentes con `quantmod` y `xts`
+2. Calcular rendimientos logarítmicos y verificar la presencia de efectos ARCH en ambas series
+3. Estimar un DCC-GARCH para la correlación condicional dinámica entre rendimientos del S&P500 y el peso/dólar
+
+---
+
+```{r cars, warning=FALSE}
+library(quantmod)
+library(rmgarch)
+library(xts)
+
+```
+
+## Carga de Datos
+```{r warning=FALSE}
+# Fechas del ejemplo
+start_date <- "2015-01-01"
+end_date   <- Sys.Date()
+
+# Descargar datos desde Yahoo Finance
+getSymbols("^GSPC", src = "yahoo", from = start_date, to = end_date)
+getSymbols("MXN=X", src = "yahoo", from = start_date, to = end_date)
+
+# Precios de cierre
+sp500 <- Cl(GSPC)
+mxn   <- Cl(`MXN=X`)
+
+# Unir y eliminar NAs
+data_prices <- na.omit(merge(sp500, mxn))
+
+data_prices
+
+```
+
+
+```{r}
+# Rendimientos logarítmicos
+ret <- diff(log(data_prices))[-1]
+colnames(ret) <- c("sp500", "mxn")
+
+head(ret)
+```
+
+## Especificación univariada GARCH(1,1)
+
+```{r}
+
+uspec <- ugarchspec(
+  variance.model = list(model = "sGARCH", garchOrder = c(1,1)),
+  mean.model     = list(armaOrder = c(0,0), include.mean = FALSE),
+  distribution.model = "norm"
+)
+
+```
+
+## Modelo Dynamic Conditional Correlation (DCC)-GARCH(1,1)
+
+```{r}
+spec <- dccspec(
+  uspec = multispec(replicate(2, uspec)),
+  dccOrder = c(1,1),
+  distribution = "mvnorm"
+)
+
+fit <- dccfit(spec, data = ret)
+fit
+
+```
+
+```{r}
+cov_t <- rcov(fit)
+last_cov <- cov_t[,,ncol(ret)]
+last_cov
+
+```
+
+```{r}
+vol_t <- sigma(fit)
+tail(vol_t)
+
+```
+
+```{r}
+# Convertir a objeto xts con nombres claros
+colnames(vol_t) <- colnames(ret)
+
+# Graficar
+plot(vol_t[,1], type = "l", col = "blue", lwd = 2,
+     main = "Volatilidad Condicional - Activo 1",
+     ylab = "Sigma_t", xlab = "Tiempo")
+
+plot(vol_t[,2], type = "l", col = "red", lwd = 2,
+     main = "Volatilidad Condicional - Activo 2",
+     ylab = "Sigma_t", xlab = "Tiempo")
+
+```
+
+
+```{r}
+plot(vol_t[,1], type = "l", col = "blue", lwd = 2,
+     main = "Volatilidades Condicionales (DCC-GARCH)",
+     ylab = "Sigma_t", xlab = "Tiempo")
+lines(vol_t[,2], col = "red", lwd = 2)
+
+```
+
+---
+
+## Ejercicios
+
+1. ¿Cómo cambió la correlación condicional entre el S&P500 y el MXN/USD durante el episodio de COVID-19 (marzo 2020)? Grafica la correlación dinámica estimada.
+2. Calcula el índice VIX (descárgalo con `getSymbols("^VIX")`) y grafica su relación con la volatilidad condicional del peso estimada por el GARCH. ¿Qué tan correlacionadas están las dos medidas de riesgo?
+3. Estima el mismo DCC-GARCH pero reemplazando el S&P500 por el índice ACWI (mercados globales). ¿Cambia la correlación dinámica con el peso? ¿Qué sugiere sobre la integración financiera de México?
+
