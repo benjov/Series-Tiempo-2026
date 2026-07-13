@@ -43,7 +43,7 @@ Cada carpeta corresponde a una sesión del curso. Los datos y funciones comparti
 - Representación de algunos procesos divergentes
 
 ### 3. Procesos Estacionarios Univariados
-- Procesos Autoregresivos AR(p)
+- Procesos Autorregresivos AR(p)
 - Procesos de Medias Móviles MA(q)
 - Procesos ARMA(p, q) y ARIMA(p, d, q)
 - Función de Autocorrelación, Función de Autocorrelación Parcial y Pronósticos
@@ -58,7 +58,7 @@ Cada carpeta corresponde a una sesión del curso. Los datos y funciones comparti
 - Pruebas de Raíz Unitaria: Dickey-Fuller, ADF, Phillips-Perron y de Cambio Estructural
 - Descomposición de series de tiempo (filtros)
 
-### 6. Procesos de Vectores Autoregresivos
+### 6. Procesos de Vectores Autorregresivos
 - Causalidad de Granger
 - Definición y representación del sistema VAR
 - Análisis de Impulso-Respuesta (identificación de innovaciones estructurales)

@@ -1,6 +1,6 @@
 ## Clase 04 — Simulación de un Proceso AR(1)
 
-**Tema:** Sección 3.a del temario: Procesos Autoregresivos AR(p)
+**Tema:** Sección 3.a del temario: Procesos Autorregresivos AR(p)
 **Datos:** No se usan datos externos (proceso simulado, T=1000)
 **Paquetes principales:** `ggplot2`, `dplyr`, `latex2exp`
 

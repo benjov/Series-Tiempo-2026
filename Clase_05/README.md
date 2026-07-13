@@ -1,6 +1,6 @@
 ## Clase 05 — Aplicación AR(1) con Datos Reales
 
-**Tema:** Sección 3.a del temario: Procesos Autoregresivos AR(p)
+**Tema:** Sección 3.a del temario: Procesos Autorregresivos AR(p)
 **Datos:** `Base_Transporte.xlsx` — INEGI, transporte aéreo y metro CDMX (mensual)
 **Paquetes principales:** `ggplot2`, `dplyr`, `readxl`, `stats`
 

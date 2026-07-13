@@ -15,7 +15,7 @@ editor_options:
 
 ## ¿Qué aprenderemos hoy?
 
-Generalizamos el AR univariado al caso multivariado con los Vectores Autoregresivos (VAR). El VAR(p) modela simultáneamente la dinámica de un sistema de variables, capturando sus interdependencias temporales sin imponer restricciones de causalidad a priori.
+Generalizamos el AR univariado al caso multivariado con los Vectores Autorregresivos (VAR). El VAR(p) modela simultáneamente la dinámica de un sistema de variables, capturando sus interdependencias temporales sin imponer restricciones de causalidad a priori.
 
 Al terminar esta clase deberás poder:
 

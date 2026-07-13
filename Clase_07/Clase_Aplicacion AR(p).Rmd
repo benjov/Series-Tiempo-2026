@@ -15,7 +15,7 @@ editor_options:
 
 ## ¿Qué aprenderemos hoy?
 
-Generalizamos el análisis autoregresivo al caso de orden p arbitrario. El reto principal es la selección del orden: combinamos la inspección de la FACP con criterios de información (AIC y BIC) para encontrar el modelo más parsimonioso.
+Generalizamos el análisis autorregresivo al caso de orden p arbitrario. El reto principal es la selección del orden: combinamos la inspección de la FACP con criterios de información (AIC y BIC) para encontrar el modelo más parsimonioso.
 
 Al terminar esta clase deberás poder:
 

@@ -61,11 +61,17 @@ Para el análisis de temas financieros existe una librería de mucha utilidad ll
 
 ```{r warning=FALSE}
 
-options("getSymbols.warning4.0"=FALSE)
+## Datos congelados (corte: 2026-07-07) para reproducibilidad.
+## Quien desee replicar el ejercicio con datos vivos puede descomentar
+## las siguientes líneas para descargar la serie actualizada desde
+## Yahoo Finance (los resultados numéricos cambiarán con cada descarga):
+#
+# options("getSymbols.warning4.0" = FALSE)
+# BTC <- getSymbols("BTC-USD", src = "yahoo", auto.assign = FALSE)
+# BTC <- na.omit(BTC)
+# save(BTC, file = "../data/BTC_USD.RData")
 
-BTC <-getSymbols("BTC-USD", src = "yahoo", auto.assign = FALSE)
-
-BTC <- na.omit(BTC)
+load("../data/BTC_USD.RData")
 
 head(BTC)
 
@@ -83,13 +89,13 @@ chartSeries(BTC,TA='addBBands();
 
 ```
 
-Para fines del ejercicio de esta clase, usaremos el valor de la acción ajustado. Esto nos servirá para calcular el rendimiento diario, o puesto en lenguaje de series temporales podemos decir que usaremos la serie en diferencias logarítmicas. 
+Para fines del ejercicio de esta clase, usaremos el precio ajustado del activo (serie congelada del 2014-09-17 al 2026-07-07). Esto nos servirá para calcular el rendimiento diario, o puesto en lenguaje de series temporales podemos decir que usaremos la serie en diferencias logarítmicas.
 
 ```{r}
 plot(BTC$`BTC-USD.Adjusted`)
 ```
 
-Una de las preguntas relevantes al observar la serie en diferencias, es si podríamos afirmar que esta serie cumple con el supuesto de homoscedasticidad. 
+Una de las preguntas relevantes al observar la serie en diferencias, es si podríamos afirmar que esta serie cumple con el supuesto de homocedasticidad.
 ```{r}
 logret <- ts(diff(log(BTC$`BTC-USD.Adjusted`))[-1])
 
@@ -231,18 +237,15 @@ $h_t = \omega+\alpha_i\varepsilon^2_{t-i}+u_t$
 
 $\varepsilon$~$N(0,1)$
 
+La prueba puede repetirse para diferentes especificaciones de ARCH, sin embargo, para efectos ilustrativos usaremos un ARCH(1). Para la media condicional empleamos una especificación AR(2), que mantendremos en todas las estimaciones de esta clase.
+
 ```{r}
 library(rugarch)
 
 ```
 
 ```{r}
-auto.arima(logret)
-
-```
-
-```{r}
-model.spec = ugarchspec(variance.model = list(model = 'sGARCH' , garchOrder = c(1, 0)), 
+model.spec = ugarchspec(variance.model = list(model = 'sGARCH' , garchOrder = c(1, 0)),
                         mean.model = list(armaOrder = c(2,0)), distribution.model = "std")
 
 arch.fit = ugarchfit(spec = model.spec , data = logret, solver = 'solnp')
@@ -337,19 +340,23 @@ infocriteria(fit.garch.n)
 
 ```
 
-```{r}
+Podemos hacer una búsqueda del mejor modelo de entre varios que probemos en un espectro de hasta un GARCH(4,4). La selección se realiza sobre los rendimientos (`logret`), manteniendo para la media condicional la misma especificación AR(2) empleada en las estimaciones anteriores.
+
+```{r warning=FALSE, message=FALSE}
 #Selección del modelo óptimo
 
 source("../utils/lag_opt_GARCH.R")
 
-Lag_Opt_GARCH(ehatsq,4,4)
+Lag_Opt_GARCH(logret, 4, 4, arma = c(2, 0))
 ```
+
+Con los datos al corte señalado, el modelo óptimo es un GARCH(3,1) (`garchOrder = c(1, 3)`).
 
 ```{r}
 
-# Estimación de modelo óptimo 
+# Estimación de modelo óptimo
 
-model.spec = ugarchspec(variance.model = list(model = 'sGARCH' , garchOrder = c(4,4)), 
+model.spec = ugarchspec(variance.model = list(model = 'sGARCH' , garchOrder = c(1,3)),
                         mean.model = list(armaOrder = c(2,0)), distribution.model = "std")
 
 
@@ -401,14 +408,11 @@ ggplot()+
 ```
 
 
-### Forecasting with GARCH(1,1)
+### Pronósticos con el modelo GARCH óptimo
 
-Para realizar pronósticos con la estimación de un GARCH, utilizando la librería _rugarch_, es necesario utilizar la función __ugarchforecast()__. 
+Para realizar pronósticos con la estimación de un GARCH, utilizando la librería _rugarch_, es necesario utilizar la función __ugarchforecast()__. Emplearemos el modelo GARCH(3,1) con media AR(2) que resultó óptimo en la sección anterior (objeto `model.fit`):
 
 ```{r}
-model.spec = ugarchspec(variance.model = list(model = 'sGARCH' , garchOrder = c(1,1)), 
-                        mean.model = list(armaOrder = c(4,2)), distribution.model = "std")
-model.fit = ugarchfit(spec = model.spec , data = logret, solver = 'solnp')
 spec = getspec(model.fit)
 setfixed(spec) <- as.list(coef(model.fit))
 ```

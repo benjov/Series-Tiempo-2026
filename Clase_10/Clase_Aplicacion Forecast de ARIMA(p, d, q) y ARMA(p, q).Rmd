@@ -241,7 +241,7 @@ DLPax_Nal_f$se
 
 ```{r}
 
-Pronostico_Arima <- read_excel("Pronostico_Arima.xlsx", sheet = "Datos", col_names = TRUE)
+Pronostico_Arima <- read_excel("Pronostico_ARIMA.xlsx", sheet = "Datos", col_names = TRUE)
 
 Pronostico_Arima$Pax_Nal_f <- Pronostico_Arima$Pax_Nal
 

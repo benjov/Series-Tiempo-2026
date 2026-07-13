@@ -1,6 +1,6 @@
 ## Clase 15 — Modelo VAR(p)
 
-**Tema:** Sección 6 del temario: Procesos de Vectores Autoregresivos
+**Tema:** Sección 6 del temario: Procesos de Vectores Autorregresivos
 **Datos:** `Datos_Ad.RData` — INPC, TC, CETE28, IGAE ajustados (de Clase_11)
 **Paquetes principales:** `vars`, `urca`, `strucchange`, `zoo`
 
