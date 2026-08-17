@@ -1,0 +1,165 @@
+/* ============================================================
+   slides.css — motor de diapositivas del curso.
+   Escenario fijo de 1280x720 escalado al viewport: lo que se ve
+   en la pantalla del profesor es exactamente lo que se proyecta.
+   ============================================================ */
+
+html, body { height: 100%; overflow: hidden; background: var(--plane); }
+body.deck { display: block; }
+
+.stage-wrap { position: fixed; inset: 0; display: grid; place-items: center; }
+.stage {
+  position: relative; width: 1280px; height: 720px; flex: none;
+  background: var(--paper); color: var(--ink);
+  transform-origin: center center; overflow: hidden;
+  box-shadow: var(--shadow);
+}
+
+.slide {
+  position: absolute; inset: 0; padding: 54px 72px 62px;
+  display: none; flex-direction: column;
+}
+.slide.is-active { display: flex; animation: entra 220ms ease-out; }
+@keyframes entra { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .slide { animation: none; } }
+
+/* ---------- Tipografía del escenario ---------- */
+.stage { font-size: 21px; line-height: 1.5; }
+.slide h2 {
+  font-size: 40px; letter-spacing: -0.03em; margin: 0 0 6px; max-width: 24ch;
+}
+.slide h3 { font-size: 22px; margin: 0 0 8px; letter-spacing: -0.015em; }
+.slide .kicker {
+  font-size: 13px; letter-spacing: 0.13em; text-transform: uppercase;
+  color: var(--accent); font-weight: 660; margin-bottom: 14px;
+}
+.slide .dek { font-size: 20px; color: var(--ink-2); margin: 0 0 18px; max-width: 78ch; }
+.slide .body { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 14px; }
+.slide ul { padding-left: 22px; margin: 0; }
+.slide li { margin: 0.42em 0; }
+.slide li::marker { color: var(--muted); }
+.slide .note {
+  margin-top: auto; padding-top: 12px; border-top: 1px solid var(--rule);
+  font-size: 15px; color: var(--muted); max-width: 92ch;
+}
+.slide .note b { color: var(--ink-2); font-weight: 620; }
+
+/* ---------- Portada ---------- */
+.slide.cover { justify-content: center; padding: 54px 82px; }
+.slide.cover h1 {
+  font-size: 62px; letter-spacing: -0.04em; margin: 0 0 14px; max-width: 20ch;
+}
+.slide.cover .sub { font-size: 24px; color: var(--ink-2); margin: 0 0 34px; }
+.slide.cover .rule { width: 74px; height: 3px; background: var(--accent); border-radius: 2px; margin: 0 0 30px; }
+.slide.cover .who { font-size: 19px; color: var(--ink-2); line-height: 1.7; }
+.slide.cover .who b { color: var(--ink); font-weight: 620; }
+.slide.cover .where { margin-top: 26px; font-size: 15px; color: var(--muted); }
+
+/* ---------- Retículas ---------- */
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 26px; align-items: start; }
+.two.wide-left { grid-template-columns: 1.35fr 1fr; }
+.two.wide-right { grid-template-columns: 1fr 1.35fr; }
+.three { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+.stack { display: flex; flex-direction: column; gap: 14px; }
+
+.panel {
+  background: var(--plane); border: 1px solid var(--rule); border-radius: 10px;
+  padding: 16px 18px;
+}
+.panel.accent { background: var(--accent-wash); border-color: color-mix(in srgb, var(--accent) 35%, transparent); }
+.panel h3 { font-size: 18px; margin-bottom: 6px; }
+.panel p, .panel ul { font-size: 18px; color: var(--ink-2); margin: 0; }
+.panel .lead { font-size: 30px; font-weight: 660; letter-spacing: -0.02em; color: var(--ink); line-height: 1.15; }
+.panel .cap { font-size: 14px; color: var(--muted); margin-top: 4px; }
+
+.qcard {
+  border-left: 3px solid var(--accent); padding: 4px 0 4px 18px; margin-bottom: 18px;
+}
+.qcard .q { font-size: 21px; color: var(--ink); }
+.qcard .a { font-size: 16px; color: var(--muted); margin-top: 4px; }
+
+/* ---------- Tabla del escenario ---------- */
+.slide table { width: 100%; border-collapse: collapse; font-size: 17px; }
+.slide th, .slide td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--rule); }
+.slide th {
+  font-size: 12.5px; text-transform: uppercase; letter-spacing: 0.08em;
+  color: var(--muted); font-weight: 620; border-bottom-color: var(--axis);
+}
+.slide td { color: var(--ink-2); }
+.slide td b, .slide td strong { color: var(--ink); font-weight: 620; }
+.slide td.num, .slide th.num { text-align: right; font-variant-numeric: tabular-nums; }
+.slide tr:last-child td { border-bottom: 0; }
+
+/* ---------- Ecuaciones ---------- */
+.slide .eq { font-size: 24px; margin: 10px 0; }
+.slide .eq.big { font-size: 28px; }
+
+/* ---------- Fragmentos (aparecen paso a paso) ---------- */
+.frag { opacity: 0; transition: opacity 180ms ease-out; }
+.frag.on { opacity: 1; }
+@media print { .frag { opacity: 1 !important; } }
+
+/* ---------- Cromo: progreso, número, controles ---------- */
+.chrome-num {
+  position: absolute; right: 26px; bottom: 18px; font-size: 13px; color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.chrome-tag {
+  position: absolute; left: 72px; bottom: 18px; font-size: 13px; color: var(--muted);
+}
+.progress {
+  position: absolute; left: 0; bottom: 0; height: 3px; background: var(--accent);
+  width: 0; transition: width 200ms ease-out;
+}
+
+.controls {
+  position: fixed; right: 14px; bottom: 12px; display: flex; gap: 6px; z-index: 30;
+  opacity: 0.28; transition: opacity 150ms;
+}
+.controls:hover, .controls:focus-within { opacity: 1; }
+.controls button {
+  width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--rule);
+  background: var(--paper); color: var(--ink-2); cursor: pointer; font: inherit; font-size: 14px;
+  display: grid; place-items: center; padding: 0;
+}
+.controls button:hover { background: var(--plane); color: var(--ink); }
+
+/* ---------- Índice y ayuda ---------- */
+.overlay {
+  position: fixed; inset: 0; z-index: 40; display: none;
+  background: color-mix(in srgb, var(--plane) 92%, transparent);
+  backdrop-filter: blur(6px); overflow: auto; padding: 42px 5vw;
+}
+.overlay.on { display: block; }
+.overlay h2 { font-size: 22px; margin-bottom: 18px; }
+.ov-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 8px; }
+.ov-grid button {
+  text-align: left; background: var(--paper); border: 1px solid var(--rule); border-radius: 9px;
+  padding: 10px 12px; cursor: pointer; font: inherit; font-size: 14px; color: var(--ink-2);
+  display: flex; gap: 10px; align-items: baseline;
+}
+.ov-grid button:hover { border-color: var(--accent); color: var(--ink); }
+.ov-grid button.cur { border-color: var(--accent); background: var(--accent-wash); color: var(--ink); }
+.ov-grid .i { color: var(--muted); font-variant-numeric: tabular-nums; font-size: 12px; min-width: 1.6em; }
+.help-list { font-size: 15px; color: var(--ink-2); display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 8px 24px; }
+.help-list div { padding: 4px 0; border-bottom: 1px solid var(--rule); }
+.help-list kbd { margin-right: 6px; }
+
+/* ---------- Impresión / exportar a PDF ---------- */
+@media print {
+  @page { size: 1280px 720px; margin: 0; }
+  html, body { overflow: visible; height: auto; background: #fff; }
+  .stage-wrap { position: static; display: block; }
+  .stage {
+    transform: none !important; box-shadow: none; width: 1280px; height: 720px;
+    page-break-after: always; break-after: page;
+  }
+  .controls, .overlay, .progress { display: none !important; }
+  .slide {
+    display: flex !important; position: relative; height: 720px;
+    page-break-after: always; break-after: page;
+    animation: none !important; opacity: 1 !important;
+  }
+  .slide:last-of-type { page-break-after: auto; break-after: auto; }
+  .stage { height: auto; page-break-after: auto; break-after: auto; }
+}

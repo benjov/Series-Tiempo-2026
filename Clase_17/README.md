@@ -25,6 +25,7 @@ Clase_17/
 | Archivo | Descripción |
 |---|---|
 | `VAR Recursivo/Clase_VAR(p) - IRF-Recursivo.Rmd` | Notebook principal en R |
+| `VAR Recursivo/Clase_VAR-p----IRF-Recursivo.html` | Versión renderizada (abrir en navegador) |
 | `VAR Recursivo/VAR_Recursivo.xlsx` | Datos para el SVAR |
 | `VAR Estructural/Largo-Plazo/BQ1989/` | Replicación de Blanchard & Quah (1989) en MATLAB |
 | `VAR Estructural/Restriccion-Signos/Uhlig2005/` | Replicación de Uhlig (2005) en MATLAB |

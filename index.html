@@ -1,0 +1,621 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Análisis de Series de Tiempo — Facultad de Economía, UNAM · 2027-I</title>
+<meta name="description" content="Curso de Análisis de Series de Tiempo, Facultad de Economía UNAM, semestre 2027-I. Temario, materiales por sesión, notebooks de R y recursos del curso.">
+<meta name="author" content="Benjamín Oliva y Omar Alfaro">
+<meta property="og:title" content="Análisis de Series de Tiempo · FE-UNAM 2027-I">
+<meta property="og:description" content="Temario, 28 sesiones con notebooks de R y recursos del curso.">
+<meta property="og:type" content="website">
+<script>try{var t=localStorage.getItem('st-tema');if(t)document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
+<link rel="stylesheet" href="assets/css/base.css">
+<link rel="stylesheet" href="assets/css/site.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%231c5cab'/%3E%3Cpolyline points='5,22 11,14 16,18 21,8 27,12' fill='none' stroke='white' stroke-width='2.5' stroke-linejoin='round' stroke-linecap='round'/%3E%3C/svg%3E">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="wrap">
+    <a class="brand" href="index.html">Series de Tiempo <span>· 2027-I</span></a>
+    <nav class="topnav">
+      <a href="#ruta">Temario</a>
+      <a href="#sesiones">Sesiones</a>
+      <a href="#evaluacion" class="opt">Evaluación</a>
+      <a href="#recursos" class="opt">Recursos</a>
+      <a href="clase-01.html">Sesión 1 ↗</a>
+      <button class="theme-btn" data-theme-toggle type="button" aria-label="Cambiar tema claro u oscuro" title="Cambiar tema">
+        <span class="i-sun" aria-hidden="true">☀</span><span class="i-moon" aria-hidden="true">☾</span>
+      </button>
+    </nav>
+  </div>
+</header>
+
+<!-- ============================ PORTADA ============================ -->
+<div class="hero">
+  <div class="wrap">
+    <div class="eyebrow">Facultad de Economía · UNAM · Semestre 2027-I</div>
+    <h1>Análisis de Series de Tiempo</h1>
+    <p class="lede">
+      Un curso de econometría de series de tiempo que va de las ecuaciones en diferencia
+      a los modelos VAR estructurales, la cointegración y los modelos de volatilidad,
+      con datos reales de la economía mexicana y todo el código en R.
+    </p>
+    <div class="hero-meta">
+      <span><b>Benjamín Oliva</b> · benjov@ciencias.unam.mx</span>
+      <span><b>Omar Alfaro</b> · omarxalpha@gmail.com</span>
+      <span>Agosto – diciembre 2026</span>
+    </div>
+    <div class="cta">
+      <a class="btn primary" href="clase-01.html">Diapositivas de la Sesión 1 →</a>
+      <a class="btn" href="#sesiones">Materiales por sesión</a>
+      <a class="btn" href="https://benjov.github.io/Series-Tiempo/index.html">Notas de clase ↗</a>
+      <a class="btn" href="https://github.com/benjov/Series-Tiempo-2026">Repositorio ↗</a>
+    </div>
+
+    <div class="stats">
+      <div class="stat"><div class="v">28</div><div class="l">sesiones con material</div></div>
+      <div class="stat"><div class="v">10</div><div class="l">unidades del temario</div></div>
+      <div class="stat"><div class="v">50 / 50</div><div class="l">teoría y laboratorio</div></div>
+      <div class="stat"><div class="v">R</div><div class="l">RStudio + R Markdown</div></div>
+      <div class="stat"><div class="v">2002–2025</div><div class="l">datos INEGI, Banxico, BMV</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================ QUÉ ES ============================ -->
+<section class="band paper">
+  <div class="wrap">
+    <div class="cols">
+      <div>
+        <div class="sec-num">El curso</div>
+        <h2 style="font-size:clamp(1.5rem,3vw,2rem);letter-spacing:-.025em">De la teoría al dato,
+          y del dato de vuelta a la teoría</h2>
+        <p style="color:var(--ink-2);max-width:60ch">
+          Cada sesión tiene dos mitades: una de teoría —el modelo, sus supuestos, sus condiciones
+          de estacionariedad e invertibilidad— y una de laboratorio, donde el mismo modelo se
+          estima en R sobre series mexicanas: transporte aéreo del INEGI, INPC, tipo de cambio,
+          CETE 28, IGAE y precios de activos financieros.
+        </p>
+        <p style="color:var(--ink-2);max-width:60ch">
+          El hilo conductor es deliberado: la misma base de transporte aéreo recorre las sesiones
+          03 a 10, de modo que la FAC, el AR(1), el AR(p), el MA(q), el ARIMA y el pronóstico se
+          ven sobre la misma serie y se pueden comparar entre sí.
+        </p>
+      </div>
+      <div class="box">
+        <h3>Al terminar el curso deberías poder</h3>
+        <ul>
+          <li>Identificar, estimar y diagnosticar modelos <b>ARMA / ARIMA / SARIMA</b> y generar pronósticos con intervalos.</li>
+          <li>Distinguir una serie <b>estacionaria</b> de una con raíz unitaria y elegir la prueba adecuada.</li>
+          <li>Especificar un <b>VAR</b>, verificar su estabilidad e interpretar funciones de impulso-respuesta.</li>
+          <li>Probar <b>cointegración</b> y escribir el modelo de corrección de errores correspondiente.</li>
+          <li>Modelar <b>volatilidad</b> con ARCH/GARCH y sus versiones multivariadas.</li>
+          <li>Escribir un trabajo empírico reproducible en R Markdown.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ RUTA / TEMARIO ============================ -->
+<section class="band" id="ruta">
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="sec-num">Ruta del curso</div>
+      <h2>Las 10 unidades del temario</h2>
+      <p>Cada unidad enlaza a las sesiones de laboratorio que le corresponden. Un clic abre
+         el notebook ya renderizado: código, salidas y gráficas, sin necesidad de ejecutar nada.</p>
+    </div>
+
+    <div class="units">
+
+      <div class="unit">
+        <div class="n">00</div>
+        <div>
+          <h3>Preparación</h3>
+          <p>El entorno de trabajo antes de empezar: R como lenguaje, RStudio, R Markdown y las
+             herramientas complementarias del econometrista.</p>
+        </div>
+        <div class="links">
+          <a class="chip" href="Clase_IntroR/intro_R.html"><span class="num">IntroR</span> Introducción a R</a>
+          <a class="chip" href="Clase_ToolBox/Toolbox_intro.html"><span class="num">ToolBox</span> Entorno y herramientas</a>
+        </div>
+      </div>
+
+      <div class="unit">
+        <div class="n">1</div>
+        <div>
+          <h3>Introducción al análisis de series de tiempo</h3>
+          <p>La naturaleza de los datos de series de tiempo. Ejemplos y aplicaciones: niveles,
+             números índice y diferencias logarítmicas.</p>
+        </div>
+        <div class="links">
+          <a class="chip" href="clase-01.html"><span class="num">S1</span> Diapositivas de introducción</a>
+          <a class="chip" href="Clase_00/Clase_00.html"><span class="num">00</span> Series económicas en R</a>
+          <a class="chip" href="Clase_02/Clase_simulacion_proc_estocasticos.html"><span class="num">02</span> Procesos estocásticos</a>
+        </div>
+      </div>
+
+      <div class="unit">
+        <div class="n">2</div>
+        <div>
+          <h3>Elementos de ecuaciones en diferencia</h3>
+          <p>Ecuaciones homogéneas de primer orden y órdenes superiores, operadores de rezago
+             y procesos divergentes.</p>
+        </div>
+        <div class="links">
+          <a class="chip" href="Clase_01/Simulacion_1_2_orden.html"><span class="num">01</span> Simulación de 1er y 2º orden</a>
+        </div>
+      </div>
+
+      <div class="unit">
+        <div class="n">3</div>
+        <div>
+          <h3>Procesos estacionarios univariados</h3>
+          <p>AR(p), MA(q), ARMA y ARIMA; función de autocorrelación y autocorrelación parcial;
+             el enfoque clásico del pronóstico.</p>
+        </div>
+        <div class="links">
+          <a class="chip" href="Clase_03/Clase_autocorrelacion_y_otras_pruebas.html"><span class="num">03</span> FAC, FACP y Ljung-Box</a>
+          <a class="chip" href="Clase_04/Clase_Simulaci%C3%B3n-de-un-proceso-AR-1-.html"><span class="num">04</span> Simulación AR(1)</a>
+          <a class="chip" href="Clase_05/Clase_Aplicacion-AR-1-.html"><span class="num">05</span> AR(1) aplicado</a>
+          <a class="chip" href="Clase_06/Clase_Aplicacion-AR-2-.html"><span class="num">06</span> AR(2)</a>
+          <a class="chip" href="Clase_07/Clase_Aplicacion-AR-p-.html"><span class="num">07</span> AR(p)</a>
+          <a class="chip" href="Clase_08/Clase_Aplicacion-MA-q-.html"><span class="num">08</span> MA(q)</a>
+          <a class="chip" href="Clase_09/Clase_Aplicacion-ARIMA-p%2C-d%2C-q--y-ARMA-p%2C-q-.html"><span class="num">09</span> ARIMA y ARMA</a>
+          <a class="chip" href="Clase_10.5/Clase_Aplicacion-ARIMA-p%2C-d%2C-q--y-ARMA-p%2C-q--V2.html"><span class="num">10.5</span> SARIMA</a>
+          <a class="chip" href="Clase_10/Clase_Aplicacion-Forecast-de-ARIMA-p%2C-d%2C-q--y-ARMA-p%2C-q-.html"><span class="num">10</span> Pronóstico</a>
+        </div>
+      </div>
+
+      <div class="unit">
+        <div class="n">4</div>
+        <div>
+          <h3>Procesos no estacionarios</h3>
+          <p>Formas de no estacionariedad, eliminación de la tendencia, pruebas de raíz unitaria
+             (DF, ADF, Phillips-Perron, cambio estructural) y descomposición por filtros.</p>
+        </div>
+        <div class="links">
+          <a class="chip" href="Clase_11/Clase_Aplicacion-Modelos-de-Desestacionalizacion.html"><span class="num">11</span> X-13ARIMA-SEATS</a>
+          <a class="chip" href="Clase_12/Clase_Filtro-HP.html"><span class="num">12</span> Filtro Hodrick-Prescott</a>
+          <a class="chip" href="Clase_13/Clase_Procesos-No-Estacionarios--Pruebas-de-Raices-Unitarias-.html"><span class="num">13</span> Raíces unitarias</a>
+        </div>
+      </div>
+
+      <div class="unit">
+        <div class="n">5</div>
+        <div>
+          <h3>Procesos de vectores autorregresivos</h3>
+          <p>Causalidad de Granger, representación del sistema, impulso-respuesta,
+             representación de medias móviles e identificación de innovaciones estructurales.</p>
+        </div>
+        <div class="links">
+          <a class="chip" href="Clase_14/Clase_Causalidad-de-Granger.html"><span class="num">14</span> Causalidad de Granger</a>
+          <a class="chip" href="Clase_15/Clase_VAR-p-.html"><span class="num">15</span> VAR(p)</a>
+          <a class="chip" href="Clase_16/Clase_VAR-p----Analisis-de-Impulso-Respuesta.html"><span class="num">16</span> Impulso-respuesta y FEVD</a>
+          <a class="chip" href="Clase_17/VAR%20Recursivo/Clase_VAR-p----IRF-Recursivo.html"><span class="num">17</span> SVAR e IRF recursivo</a>
+          <a class="chip soft" href="https://github.com/benjov/Series-Tiempo-2026/tree/main/Clase_17/VAR%20Estructural"><span class="num">17</span> Replicaciones en MATLAB ↗</a>
+        </div>
+      </div>
+
+      <div class="unit">
+        <div class="n">6</div>
+        <div>
+          <h3>Cointegración</h3>
+          <p>Propiedades del proceso cointegrado, modelos de una ecuación, cointegración en VAR
+             (Johansen) y su lectura desde la teoría económica.</p>
+        </div>
+        <div class="links">
+          <a class="chip" href="Clase_18/Clase_Cointegracion.html"><span class="num">18</span> Engle-Granger, Johansen y VECM</a>
+        </div>
+      </div>
+
+      <div class="unit">
+        <div class="n">7</div>
+        <div>
+          <h3>Modelos de volatilidad</h3>
+          <p>ARCH y GARCH univariados, extensiones multivariadas M-ARCH y M-GARCH,
+             y otros modelos de volatilidad.</p>
+        </div>
+        <div class="links">
+          <a class="chip" href="Clase_20/ARCH_GARCH.html"><span class="num">20</span> ARCH y GARCH</a>
+          <a class="chip" href="Clase_20/Multivariate-GARCH.html"><span class="num">20</span> M-GARCH</a>
+          <a class="chip" href="Clase_20/Multivariate-GARCH-Case-2.html"><span class="num">20</span> M-GARCH, caso 2</a>
+        </div>
+      </div>
+
+      <div class="unit">
+        <div class="n">8</div>
+        <div>
+          <h3>Modelos ARDL</h3>
+          <p>Rezagos distribuidos autorregresivos y la prueba de límites (bounds test) para
+             relaciones de largo plazo con variables de orden de integración mixto.</p>
+        </div>
+        <div class="links">
+          <a class="chip" href="Clase_19/Clase_ARDL.html"><span class="num">19</span> Modelos ARDL</a>
+        </div>
+      </div>
+
+      <div class="unit">
+        <div class="n">9</div>
+        <div>
+          <h3>Datos panel y Panel VAR</h3>
+          <p>Raíces unitarias en panel, evaluación de impacto con diferencias en diferencias
+             y sistemas VAR con estructura de panel.</p>
+        </div>
+        <div class="links">
+          <a class="chip" href="Clase_21/Clase_Datos-Panel----Ra%C3%ADces-unitarias-para-panel.html"><span class="num">21</span> Raíces unitarias en panel</a>
+          <a class="chip" href="Clase_21b/Modelo-Dif-in-Dif-INPC-Analisis-Clinicos.html"><span class="num">21b</span> Diferencias en diferencias</a>
+          <a class="chip" href="Clase_22/Clase_Datos-Panel----VAR-p-.html"><span class="num">22</span> Panel VAR(p)</a>
+        </div>
+      </div>
+
+      <div class="unit">
+        <div class="n">10</div>
+        <div>
+          <h3>Otros modelos no lineales</h3>
+          <p>Modelos con rompimientos y de cambio de régimen: umbrales autorregresivos (TAR)
+             y sus variantes.</p>
+        </div>
+        <div class="links">
+          <a class="chip" href="Clase_23/Clase_Modelos-de-Cambio-de-Reg%C3%ADmen--TAR-.html"><span class="num">23</span> Cambio de régimen (TAR)</a>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ============================ SESIONES ============================ -->
+<section class="band paper" id="sesiones">
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="sec-num">Materiales</div>
+      <h2>Índice de sesiones</h2>
+      <p>Cada carpeta del repositorio contiene el notebook de R Markdown, su versión renderizada
+         en HTML y un README con objetivos, datos y paquetes. Los datos y funciones compartidos
+         viven en <code>data/</code> y <code>utils/</code>.</p>
+    </div>
+
+    <div class="grid-cards">
+
+      <a class="card" href="Clase_IntroR/intro_R.html">
+        <span class="tag">Preparación</span>
+        <h3>Introducción a R</h3>
+        <p>Objetos, vectores, funciones y flujo de trabajo básico en R.</p>
+        <span class="foot"><span>base R</span><span>sin datos externos</span></span>
+      </a>
+
+      <a class="card" href="Clase_ToolBox/Toolbox_intro.html">
+        <span class="tag">Preparación</span>
+        <h3>Entorno y herramientas</h3>
+        <p>RStudio, R Markdown, Google Colab y modelos de lenguaje como apoyo.</p>
+        <span class="foot"><span>rmarkdown</span></span>
+      </a>
+
+      <a class="card" href="Clase_00/Clase_00.html">
+        <span class="tag">Sesión 00</span>
+        <h3>Series económicas en R</h3>
+        <p>Importar un <code>.xlsx</code>, declarar objetos <code>ts</code>, graficar, reindexar y
+           tomar diferencias logarítmicas.</p>
+        <span class="foot"><span>readxl</span><span>IGAE, ICC, IPC, TDC</span></span>
+      </a>
+
+      <a class="card" href="Clase_01/Simulacion_1_2_orden.html">
+        <span class="tag">Sesión 01</span>
+        <h3>Ecuaciones en diferencia</h3>
+        <p>Soluciones de primer y segundo orden; el módulo de la raíz característica y la estabilidad.</p>
+        <span class="foot"><span>ggplot2</span><span>simulación</span></span>
+      </a>
+
+      <a class="card" href="Clase_02/Clase_simulacion_proc_estocasticos.html">
+        <span class="tag">Sesión 02</span>
+        <h3>Procesos estocásticos</h3>
+        <p>Ruido blanco, caminata aleatoria y una primera lectura de la FAC.</p>
+        <span class="foot"><span>base R, shiny</span><span>simulación</span></span>
+      </a>
+
+      <a class="card" href="Clase_03/Clase_autocorrelacion_y_otras_pruebas.html">
+        <span class="tag">Sesión 03</span>
+        <h3>Autocorrelación y pruebas</h3>
+        <p>FAC y FACP muestrales, prueba de Ljung-Box, efectos calendario y estacionalidad.</p>
+        <span class="foot"><span>stats</span><span>Base_Transporte</span></span>
+      </a>
+
+      <a class="card" href="Clase_04/Clase_Simulaci%C3%B3n-de-un-proceso-AR-1-.html">
+        <span class="tag">Sesión 04</span>
+        <h3>Simulación de un AR(1)</h3>
+        <p>FAC teórica frente a FAC muestral y el papel del parámetro en la memoria del proceso.</p>
+        <span class="foot"><span>ggplot2</span><span>T = 1000</span></span>
+      </a>
+
+      <a class="card" href="Clase_05/Clase_Aplicacion-AR-1-.html">
+        <span class="tag">Sesión 05</span>
+        <h3>AR(1) con datos reales</h3>
+        <p>Estimación, diagnóstico de residuales y vida media del choque.</p>
+        <span class="foot"><span>stats</span><span>Base_Transporte</span></span>
+      </a>
+
+      <a class="card" href="Clase_06/Clase_Aplicacion-AR-2-.html">
+        <span class="tag">Sesión 06</span>
+        <h3>AR(2)</h3>
+        <p>Raíces características, condición de estacionariedad y ciclos con raíces complejas.</p>
+        <span class="foot"><span>ggplot2</span><span>Base_Transporte</span></span>
+      </a>
+
+      <a class="card" href="Clase_07/Clase_Aplicacion-AR-p-.html">
+        <span class="tag">Sesión 07</span>
+        <h3>AR(p)</h3>
+        <p>Selección del orden por AIC/BIC y FACP: parsimonia contra ajuste.</p>
+        <span class="foot"><span>ggplot2</span><span>Base_Transporte</span></span>
+      </a>
+
+      <a class="card" href="Clase_08/Clase_Aplicacion-MA-q-.html">
+        <span class="tag">Sesión 08</span>
+        <h3>MA(q)</h3>
+        <p>Invertibilidad y modelado de eventos extremos con variables dummy.</p>
+        <span class="foot"><span>ggplot2</span><span>sismo 2017, COVID-19</span></span>
+      </a>
+
+      <a class="card" href="Clase_09/Clase_Aplicacion-ARIMA-p%2C-d%2C-q--y-ARMA-p%2C-q-.html">
+        <span class="tag">Sesión 09</span>
+        <h3>ARIMA y ARMA</h3>
+        <p>Búsqueda en grilla por AIC y modelos con variables exógenas (ARIMAX).</p>
+        <span class="foot"><span>stats</span><span>Base_Transporte_ARIMA</span></span>
+      </a>
+
+      <a class="card" href="Clase_10.5/Clase_Aplicacion-ARIMA-p%2C-d%2C-q--y-ARMA-p%2C-q--V2.html">
+        <span class="tag">Sesión 10.5</span>
+        <h3>SARIMA</h3>
+        <p>Componente estacional, selección de (p,q,P,Q) y comparación contra el ARIMA puro.</p>
+        <span class="foot"><span>forecast</span><span>Base_Transporte_ARIMA</span></span>
+      </a>
+
+      <a class="card" href="Clase_10/Clase_Aplicacion-Forecast-de-ARIMA-p%2C-d%2C-q--y-ARMA-p%2C-q-.html">
+        <span class="tag">Sesión 10</span>
+        <h3>Pronóstico con ARIMA</h3>
+        <p>Pronóstico fuera de muestra, intervalos de confianza y exportación de resultados.</p>
+        <span class="foot"><span>forecast</span><span>Base_Transporte_ARIMA</span></span>
+      </a>
+
+      <a class="card" href="Clase_11/Clase_Aplicacion-Modelos-de-Desestacionalizacion.html">
+        <span class="tag">Sesión 11</span>
+        <h3>Desestacionalización</h3>
+        <p>X-13ARIMA-SEATS: tendencia, ciclo, estacionalidad e irregular. Genera <code>Datos_Ad</code>.</p>
+        <span class="foot"><span>seasonal</span><span>INPC, TC, CETE28, IGAE</span></span>
+      </a>
+
+      <a class="card" href="Clase_12/Clase_Filtro-HP.html">
+        <span class="tag">Sesión 12</span>
+        <h3>Filtro Hodrick-Prescott</h3>
+        <p>Tendencia y ciclo, elección de λ según la frecuencia y brechas macroeconómicas.</p>
+        <span class="foot"><span>mFilter</span><span>Datos_Ad</span></span>
+      </a>
+
+      <a class="card" href="Clase_13/Clase_Procesos-No-Estacionarios--Pruebas-de-Raices-Unitarias-.html">
+        <span class="tag">Sesión 13</span>
+        <h3>Raíces unitarias</h3>
+        <p>ADF y Phillips-Perron, elección de la especificación y cambio estructural.</p>
+        <span class="foot"><span>urca, strucchange</span><span>Datos_Ad</span></span>
+      </a>
+
+      <a class="card" href="Clase_14/Clase_Causalidad-de-Granger.html">
+        <span class="tag">Sesión 14</span>
+        <h3>Causalidad de Granger</h3>
+        <p>Robustez al número de rezagos y matriz de causalidad entre variables.</p>
+        <span class="foot"><span>lmtest</span><span>Datos_Ad</span></span>
+      </a>
+
+      <a class="card" href="Clase_15/Clase_VAR-p-.html">
+        <span class="tag">Sesión 15</span>
+        <h3>Modelo VAR(p)</h3>
+        <p>Selección del orden, estabilidad del sistema e interpretación macroeconómica.</p>
+        <span class="foot"><span>vars</span><span>Datos_Ad</span></span>
+      </a>
+
+      <a class="card" href="Clase_16/Clase_VAR-p----Analisis-de-Impulso-Respuesta.html">
+        <span class="tag">Sesión 16</span>
+        <h3>Impulso-respuesta</h3>
+        <p>Identificación de Cholesky, propagación de choques y descomposición de varianza.</p>
+        <span class="foot"><span>vars</span><span>Datos_Ad</span></span>
+      </a>
+
+      <a class="card" href="Clase_17/VAR%20Recursivo/Clase_VAR-p----IRF-Recursivo.html">
+        <span class="tag">Sesión 17</span>
+        <h3>VAR estructural</h3>
+        <p>SVAR recursivo en R; restricciones de largo plazo y de signo como referencia avanzada.</p>
+        <span class="foot"><span>vars, svars</span><span>+ toolbox MATLAB</span></span>
+      </a>
+
+      <a class="card" href="Clase_18/Clase_Cointegracion.html">
+        <span class="tag">Sesión 18</span>
+        <h3>Cointegración</h3>
+        <p>Engle-Granger, rango de cointegración con Johansen y especificación del VECM.</p>
+        <span class="foot"><span>urca, vars</span><span>Datos_Ad</span></span>
+      </a>
+
+      <a class="card" href="Clase_19/Clase_ARDL.html">
+        <span class="tag">Sesión 19</span>
+        <h3>Modelos ARDL</h3>
+        <p>Especificación, bounds test y relación de largo plazo.</p>
+        <span class="foot"><span>ARDL</span><span>demanda de dinero</span></span>
+      </a>
+
+      <a class="card" href="Clase_20/ARCH_GARCH.html">
+        <span class="tag">Sesión 20</span>
+        <h3>ARCH y GARCH</h3>
+        <p>Prueba de efectos ARCH, selección del orden por AIC y pronóstico de volatilidad.</p>
+        <span class="foot"><span>rugarch, FinTS</span><span>BTC-USD 2014–2026</span></span>
+      </a>
+
+      <a class="card" href="Clase_20/Multivariate-GARCH.html">
+        <span class="tag">Sesión 20</span>
+        <h3>M-GARCH</h3>
+        <p>Volatilidad multivariada y correlaciones condicionales dinámicas.</p>
+        <span class="foot"><span>rmgarch, MTS</span><span>criptoactivos</span></span>
+      </a>
+
+      <a class="card" href="Clase_21/Clase_Datos-Panel----Ra%C3%ADces-unitarias-para-panel.html">
+        <span class="tag">Sesión 21</span>
+        <h3>Raíces unitarias en panel</h3>
+        <p>Pruebas LLC e IPS sobre datos de panel.</p>
+        <span class="foot"><span>plm</span><span>EmplUK, Produc, Grunfeld</span></span>
+      </a>
+
+      <a class="card" href="Clase_21b/Modelo-Dif-in-Dif-INPC-Analisis-Clinicos.html">
+        <span class="tag">Sesión 21b</span>
+        <h3>Diferencias en diferencias</h3>
+        <p>Evaluación de impacto sobre precios de análisis clínicos en el INPC.</p>
+        <span class="foot"><span>plm, lmtest</span><span>INPC sectorial</span></span>
+      </a>
+
+      <a class="card" href="Clase_22/Clase_Datos-Panel----VAR-p-.html">
+        <span class="tag">Sesión 22</span>
+        <h3>Panel VAR(p)</h3>
+        <p>Estimación tipo Arellano-Bond de un sistema VAR con estructura de panel.</p>
+        <span class="foot"><span>panelvar</span><span>abdata, 140 empresas</span></span>
+      </a>
+
+      <a class="card" href="Clase_23/Clase_Modelos-de-Cambio-de-Reg%C3%ADmen--TAR-.html">
+        <span class="tag">Sesión 23</span>
+        <h3>Cambio de régimen (TAR)</h3>
+        <p>Modelos de umbral: no linealidad y regímenes en la dinámica de la serie.</p>
+        <span class="foot"><span>tsDyn, astsa</span><span>mortalidad por influenza</span></span>
+      </a>
+
+    </div>
+  </div>
+</section>
+
+<!-- ============================ EVALUACIÓN Y LOGÍSTICA ============================ -->
+<section class="band" id="evaluacion">
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="sec-num">Cómo se acredita</div>
+      <h2>Evaluación y logística</h2>
+    </div>
+    <div class="cols">
+      <div class="box">
+        <h3>Evaluación</h3>
+        <table class="t">
+          <tr><th>Actividad</th><th>Fecha tentativa</th><th class="num">Peso</th></tr>
+          <tr><td>Examen parcial (presencial)</td><td>8 de octubre de 2026</td><td class="num">50 %</td></tr>
+          <tr><td>Trabajo final</td><td>10 de diciembre de 2026</td><td class="num">50 %</td></tr>
+        </table>
+        <p class="small" style="margin-top:1rem;color:var(--ink-2)">
+          El trabajo final es un ensayo que aplica alguna de las técnicas del curso: debe plantear
+          una hipótesis y probarla o refutarla con datos. Los lineamientos se entregan a la mitad
+          del semestre.
+        </p>
+      </div>
+      <div class="box">
+        <h3>Cómo trabajamos</h3>
+        <ul>
+          <li><b>50 % teoría y 50 % laboratorio</b> de cómputo en cada sesión.</li>
+          <li>Lenguaje <b>R</b> con RStudio, principalmente en <b>R Markdown</b>.</li>
+          <li>Sesiones de <b>8:00 a 9:30</b>, martes y jueves; transmisión por Zoom
+              (ID <span class="tnum">831 5770 0304</span>) y grabaciones en YouTube.</li>
+          <li>Las pizarras de cada sesión quedan en OneNote.</li>
+          <li>El material se actualiza durante el semestre: <code>git pull</code> antes de cada clase.</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="box" style="margin-top:1.5rem">
+      <h3>Antes de la primera sesión de laboratorio</h3>
+      <div class="cols" style="gap:1.25rem">
+        <div>
+          <p class="small" style="margin-bottom:.4rem;color:var(--ink-2)"><b>1. Instala</b> R y RStudio (ambos gratuitos).</p>
+          <p class="small" style="margin-bottom:.4rem;color:var(--ink-2)"><b>2. Clona</b> el repositorio del curso:</p>
+          <p><code>git clone https://github.com/benjov/Series-Tiempo-2026.git</code></p>
+        </div>
+        <div>
+          <p class="small" style="margin-bottom:.4rem;color:var(--ink-2)"><b>3. Abre</b> <code>Clase_00/Clase_00.Rmd</code> y ejecútalo completo.</p>
+          <p class="small" style="color:var(--ink-2)"><b>4.</b> Si algo falla, instala los paquetes que pida:
+             <code>install.packages(c("readxl","ggplot2","forecast","urca","vars"))</code></p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ RECURSOS ============================ -->
+<section class="band paper" id="recursos">
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="sec-num">Dónde está todo</div>
+      <h2>Recursos del curso</h2>
+    </div>
+    <div class="res">
+      <a href="https://benjov.github.io/Series-Tiempo/index.html">
+        <span class="k">Notas de clase ↗</span>
+        <span class="d">El texto del curso, capítulo por capítulo.</span>
+      </a>
+      <a href="https://github.com/benjov/Series-Tiempo-2026">
+        <span class="k">Repositorio en GitHub ↗</span>
+        <span class="d">Scripts, notebooks y datos. Se actualiza con <code>git pull</code>.</span>
+      </a>
+      <a href="https://drive.google.com/drive/folders/1hIO60B2-7wxbZ5C00myFlYL_hNVdGpDt?usp=sharing">
+        <span class="k">Google Drive ↗</span>
+        <span class="d">Temario, tareas, exámenes y bibliografía.</span>
+      </a>
+      <a href="https://www.youtube.com/playlist?list=PLlCKfRj1U6Swy56X0WAHPhQS4WhA_P-9U">
+        <span class="k">Grabaciones ↗</span>
+        <span class="d">Lista de reproducción con las sesiones grabadas.</span>
+      </a>
+      <a href="https://gamesecon-my.sharepoint.com/:o:/p/boliva/IgCs7koSvNxhQrj7aQW35ujrAVF0mQqV3B4OCF2PnyJRsco?e=StVEMs">
+        <span class="k">Pizarras (OneNote) ↗</span>
+        <span class="d">Lo escrito en clase, sesión por sesión.</span>
+      </a>
+      <a href="https://cuaed-unam-mx.zoom.us/j/86435202686">
+        <span class="k">Zoom ↗</span>
+        <span class="d">Transmisión en vivo. ID <span class="tnum">831 5770 0304</span>.</span>
+      </a>
+      <a href="Temario/Temario_Series_de_Tiempo_2027_I.pdf">
+        <span class="k">Temario en PDF</span>
+        <span class="d">Programa oficial del semestre 2027-I.</span>
+      </a>
+      <a href="https://benjov.shinyapps.io/Moneda/">
+        <span class="k">App de simulación ↗</span>
+        <span class="d">Lanzamiento de moneda y caminata aleatoria, interactivo.</span>
+      </a>
+    </div>
+
+    <h3 style="margin:2.75rem 0 1rem;font-size:1.05rem">Bibliografía</h3>
+    <ol class="biblio">
+      <li><b>Enders, W. (2015).</b> <i>Applied Econometric Time Series</i>, 4a ed. Wiley.</li>
+      <li><b>Brooks, C. (2019).</b> <i>Introductory Econometrics for Finance</i>. Cambridge University Press.</li>
+      <li><b>Kirchgässner, G., Wolters, J. y Hassler, U. (2012).</b> <i>Introduction to Modern Time Series Analysis</i>, 2a ed. Springer. Caps. 2 a 8.</li>
+      <li><b>Guerrero Guzmán, V. (2014).</b> <i>Análisis Estadístico y Pronóstico de Series de Tiempo Económicas</i>, 3a ed. Jit Press. Cap. 2.</li>
+      <li><b>Lütkepohl, H. (2005).</b> <i>New Introduction to Multiple Time Series Analysis</i>. Springer.</li>
+      <li><b>Wei, W. (2019).</b> <i>Multivariate Time Series Analysis and Applications</i>. Wiley.</li>
+      <li><b>Franses, P. H. y van Dijk, D. (2003).</b> <i>Nonlinear Time Series Models in Empirical Finance</i>. Cambridge University Press.</li>
+      <li><b>Levendis, J. (2023).</b> <i>Time Series Econometrics: Learning Through Replication</i>. Springer.</li>
+      <li><b>Cowpertwait, P. y Metcalfe, A. (2009).</b> <i>Introductory Time Series with R</i>. Springer.</li>
+    </ol>
+  </div>
+</section>
+
+<footer class="site">
+  <div class="wrap fgrid">
+    <div>
+      <div style="color:var(--ink);font-weight:620">Análisis de Series de Tiempo · 2027-I</div>
+      <div>Facultad de Economía, Universidad Nacional Autónoma de México</div>
+    </div>
+    <div>
+      Benjamín Oliva · <a href="mailto:benjov@ciencias.unam.mx">benjov@ciencias.unam.mx</a><br>
+      Omar Alfaro · <a href="mailto:omarxalpha@gmail.com">omarxalpha@gmail.com</a>
+    </div>
+    <div>
+      <a href="https://github.com/benjov/Series-Tiempo-2026">Repositorio</a> ·
+      <a href="https://benjov.github.io/Series-Tiempo/index.html">Notas</a> ·
+      <a href="clase-01.html">Sesión 1</a>
+    </div>
+  </div>
+</footer>
+
+<script src="assets/js/theme.js"></script>
+</body>
+</html>

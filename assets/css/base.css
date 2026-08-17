@@ -1,0 +1,192 @@
+/* ============================================================
+   Series de Tiempo — Semestre 2027-I
+   Tokens, reset y tipografia compartidos por el sitio y las
+   diapositivas. Los colores de las series son los mismos en
+   ambos documentos: IGAE = s1, IPC = s2, TDC = s3.
+   ============================================================ */
+
+:root {
+  color-scheme: light;
+
+  /* Superficies e ink */
+  --paper: #fcfcfb;
+  --plane: #f4f3ef;
+  --card: #ffffff;
+  --ink: #0b0b0b;
+  --ink-2: #52514e;
+  --muted: #898781;
+  --rule: #e1e0d9;
+  --axis: #c3c2b7;
+  --ring: rgba(11, 11, 11, 0.10);
+  --shadow: 0 1px 2px rgba(11, 11, 11, 0.04), 0 8px 24px rgba(11, 11, 11, 0.06);
+
+  /* Acento de la interfaz (no es un color de serie) */
+  --accent: #1c5cab;
+  --accent-ink: #0d366b;
+  --accent-wash: #eaf1fb;
+
+  /* Paleta categorica de datos (validada en modo claro y oscuro) */
+  --s1: #2a78d6;
+  --s2: #eb6834;
+  --s3: #1baf7a;
+
+  --maxw: 1120px;
+  --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --paper: #17171a;
+    --plane: #0e0e10;
+    --card: #1d1d21;
+    --ink: #f7f7f5;
+    --ink-2: #c3c2b7;
+    --muted: #8f8d87;
+    --rule: #2c2c2a;
+    --axis: #45454a;
+    --ring: rgba(255, 255, 255, 0.12);
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px rgba(0, 0, 0, 0.35);
+    --accent: #86b6ef;
+    --accent-ink: #cde2fb;
+    --accent-wash: #1b2536;
+    --s1: #3987e5;
+    --s2: #d95926;
+    --s3: #199e70;
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --paper: #17171a;
+  --plane: #0e0e10;
+  --card: #1d1d21;
+  --ink: #f7f7f5;
+  --ink-2: #c3c2b7;
+  --muted: #8f8d87;
+  --rule: #2c2c2a;
+  --axis: #45454a;
+  --ring: rgba(255, 255, 255, 0.12);
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px rgba(0, 0, 0, 0.35);
+  --accent: #86b6ef;
+  --accent-ink: #cde2fb;
+  --accent-wash: #1b2536;
+  --s1: #3987e5;
+  --s2: #d95926;
+  --s3: #199e70;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 17px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4 { line-height: 1.15; margin: 0 0 0.5em; font-weight: 640; letter-spacing: -0.015em; }
+p { margin: 0 0 1em; }
+a { color: var(--accent); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+a:hover { color: var(--accent-ink); }
+ul, ol { margin: 0 0 1em; padding-left: 1.25em; }
+li { margin: 0.28em 0; }
+code, kbd { font-family: var(--mono); font-size: 0.88em; }
+code { background: var(--plane); border: 1px solid var(--rule); border-radius: 4px; padding: 0.08em 0.34em; }
+kbd {
+  background: var(--card); border: 1px solid var(--rule); border-bottom-width: 2px;
+  border-radius: 5px; padding: 0.1em 0.42em; font-size: 0.8em; color: var(--ink-2);
+}
+hr { border: 0; border-top: 1px solid var(--rule); margin: 2.5rem 0; }
+
+.small { font-size: 0.86rem; }
+.muted { color: var(--muted); }
+.nowrap { white-space: nowrap; }
+.tnum { font-variant-numeric: tabular-nums; }
+
+/* --- Notacion matematica (compuesta a mano, sin dependencias) --- */
+.m { font-family: var(--sans); white-space: nowrap; }
+.m i, .mi { font-style: italic; font-family: Georgia, "Times New Roman", serif; }
+.m sub, .m sup { font-size: 0.72em; font-style: normal; }
+.eq {
+  display: block; margin: 0.9em 0; padding: 0.75em 1em;
+  background: var(--plane); border-left: 2px solid var(--accent);
+  border-radius: 0 6px 6px 0; font-size: 1.05em;
+}
+.eq .tag { float: right; color: var(--muted); font-size: 0.82em; font-style: normal; }
+
+/* --- Llaves de color (identidad de serie fuera de la grafica) --- */
+.key { display: inline-flex; align-items: center; gap: 0.42em; white-space: nowrap; }
+.key::before {
+  content: ""; width: 14px; height: 3px; border-radius: 2px; background: var(--k, var(--s1));
+}
+.key.dot::before { width: 9px; height: 9px; border-radius: 50%; }
+.k1 { --k: var(--s1); } .k2 { --k: var(--s2); } .k3 { --k: var(--s3); }
+
+/* --- Graficas (SVG generado por assets/js/charts.js) --- */
+.chart { margin: 0; }
+.chart figcaption { color: var(--muted); font-size: 0.78rem; margin-top: 0.5rem; }
+.chart-legend {
+  display: flex; flex-wrap: wrap; gap: 0.25rem 1.1rem;
+  font-size: 0.84rem; color: var(--ink-2); margin-bottom: 0.35rem;
+}
+.chart-frame { position: relative; }
+.chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+.chart .grid { stroke: var(--rule); stroke-width: 1; shape-rendering: crispEdges; }
+.chart .axis { stroke: var(--axis); stroke-width: 1; shape-rendering: crispEdges; }
+.chart .tick { fill: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+.chart .endlab { fill: var(--ink-2); font-size: 12.5px; font-weight: 600; }
+.chart .plot-title { fill: var(--ink-2); font-size: 13px; font-weight: 620; }
+.chart .line { fill: none; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.chart .zero { stroke: var(--axis); stroke-width: 1; shape-rendering: crispEdges; }
+.chart .dot { stroke: var(--paper); stroke-width: 2; }
+.chart .c1 { stroke: var(--s1); } .chart .c1.dot { fill: var(--s1); }
+.chart .c2 { stroke: var(--s2); } .chart .c2.dot { fill: var(--s2); }
+.chart .c3 { stroke: var(--s3); } .chart .c3.dot { fill: var(--s3); }
+.chart .crosshair { stroke: var(--axis); stroke-width: 1; opacity: 0; }
+.chart .hit { fill: transparent; }
+.chart-tip {
+  position: absolute; pointer-events: none; opacity: 0; transform: translate(-50%, -120%);
+  background: var(--card); color: var(--ink); border: 1px solid var(--rule);
+  border-radius: 7px; padding: 0.4rem 0.6rem; font-size: 0.8rem; line-height: 1.35;
+  box-shadow: var(--shadow); white-space: nowrap; z-index: 5;
+  font-variant-numeric: tabular-nums;
+}
+.chart-tip .tip-when { color: var(--muted); font-size: 0.74rem; display: block; margin-bottom: 0.15rem; }
+.chart-tip .tip-row { display: flex; align-items: center; gap: 0.4rem; }
+.chart-tip .tip-row b { font-weight: 620; margin-left: auto; padding-left: 0.9rem; }
+.chart.is-hover .crosshair { opacity: 1; }
+.chart.is-hover .chart-tip { opacity: 1; }
+
+/* --- Boton de tema --- */
+.theme-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem;
+  width: 2.15rem; height: 2.15rem; padding: 0; border-radius: 8px; cursor: pointer;
+  background: transparent; border: 1px solid var(--rule); color: var(--ink-2);
+  font: inherit; font-size: 0.95rem; line-height: 1;
+}
+.theme-btn:hover { background: var(--plane); color: var(--ink); }
+:root[data-theme="dark"] .theme-btn .i-sun,
+.theme-btn .i-moon { display: inline; }
+:root[data-theme="dark"] .theme-btn .i-moon,
+.theme-btn .i-sun { display: none; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .theme-btn .i-sun { display: inline; }
+  :root:not([data-theme="light"]) .theme-btn .i-moon { display: none; }
+}
+:root[data-theme="light"] .theme-btn .i-sun { display: none; }
+:root[data-theme="light"] .theme-btn .i-moon { display: inline; }
+
+:where(a, button, [tabindex]):focus-visible {
+  outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px;
+}
+
+@media print {
+  .chart-tip, .crosshair { display: none !important; }
+}

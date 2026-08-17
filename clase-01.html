@@ -1,0 +1,626 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sesión 1 · Introducción al Análisis de Series de Tiempo — FE-UNAM 2027-I</title>
+<meta name="description" content="Diapositivas de la primera sesión del curso de Análisis de Series de Tiempo, Facultad de Economía UNAM, semestre 2027-I.">
+<script>try{var t=localStorage.getItem('st-tema');if(t)document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
+<link rel="stylesheet" href="assets/css/base.css">
+<link rel="stylesheet" href="assets/css/slides.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%231c5cab'/%3E%3Cpolyline points='5,22 11,14 16,18 21,8 27,12' fill='none' stroke='white' stroke-width='2.5' stroke-linejoin='round' stroke-linecap='round'/%3E%3C/svg%3E">
+</head>
+<body class="deck">
+
+<div class="stage-wrap">
+<div class="stage">
+
+<!-- ==================== 1. PORTADA ==================== -->
+<section class="slide cover" data-title="Portada">
+  <div class="kicker">Facultad de Economía · UNAM · Semestre 2027-I</div>
+  <h1>Análisis de Series de Tiempo</h1>
+  <p class="sub">Sesión 1 — Introducción: la naturaleza de los datos de series de tiempo</p>
+  <div class="rule"></div>
+  <div class="who">
+    <b>Benjamín Oliva</b> &nbsp;·&nbsp; benjov@ciencias.unam.mx<br>
+    <b>Omar Alfaro</b> &nbsp;·&nbsp; omarxalpha@gmail.com
+  </div>
+  <div class="where">
+    Agosto 2026 &nbsp;·&nbsp; Materiales del curso en
+    <a href="index.html">benjov.github.io/Series-Tiempo-2026</a>
+    &nbsp;·&nbsp; <kbd>→</kbd> para avanzar, <kbd>?</kbd> para la ayuda
+  </div>
+</section>
+
+<!-- ==================== 2. AGENDA ==================== -->
+<section class="slide" data-title="Agenda de la sesión">
+  <div class="kicker">Sesión 1</div>
+  <h2>Lo que haremos hoy</h2>
+  <p class="dek">Empezamos por la pregunta que da sentido al curso y terminamos con las tres
+     formas de mirar una misma serie: nivel, índice y variación.</p>
+  <div class="body">
+    <div class="two" style="gap:34px">
+      <ol style="font-size:20px;line-height:1.85">
+        <li>Para qué sirve la econometría de series de tiempo</li>
+        <li>Qué hace distinta a una serie de tiempo</li>
+        <li>Dos enfoques: el tiempo y las frecuencias</li>
+        <li>Los datos de hoy: seis series de la economía mexicana</li>
+      </ol>
+      <ol start="5" style="font-size:20px;line-height:1.85">
+        <li>El problema de las escalas y el número índice</li>
+        <li>Diferencias logarítmicas y tasas de crecimiento</li>
+        <li>Lo que ya se ve en los datos y el curso formaliza</li>
+        <li>Cómo trabajamos y cómo se evalúa</li>
+      </ol>
+    </div>
+    <div class="note">
+      Todo lo que veremos hoy está en código en <b>Clase_00</b> del repositorio del curso;
+      las gráficas de esta sesión salen de la misma base.
+    </div>
+  </div>
+</section>
+
+<!-- ==================== 3. TRES PREGUNTAS ==================== -->
+<section class="slide" data-title="Tres preguntas prácticas">
+  <div class="kicker">Motivación</div>
+  <h2>La econometría responde preguntas concretas</h2>
+  <div class="body">
+    <div class="qcard frag">
+      <div class="q"><b>Tienes un negocio.</b> ¿Cómo usar diez años de ventas mensuales para
+        predecir las ventas del próximo mes?</div>
+      <div class="a">Un problema de pronóstico: unidades 3 y 4 del curso.</div>
+    </div>
+    <div class="qcard frag">
+      <div class="q"><b>Quieres probar la hipótesis del ingreso permanente.</b> ¿El consumo es una
+        fracción estable del ingreso nacional?</div>
+      <div class="a">Una relación de largo plazo entre series no estacionarias: cointegración, unidad 6.</div>
+    </div>
+    <div class="qcard frag">
+      <div class="q"><b>Eres analista financiero.</b> ¿El precio del oro mueve al de las acciones,
+        o al revés? ¿Se puede aprovechar?</div>
+      <div class="a">Precedencia temporal y sistemas de variables: causalidad de Granger y VAR, unidad 5.</div>
+    </div>
+    <div class="note">
+      La <b>hipótesis del ingreso permanente</b> (Friedman, 1957) sostiene que el consumo de largo
+      plazo se decide con el ingreso esperado, no sólo con el ingreso corriente.
+    </div>
+  </div>
+</section>
+
+<!-- ==================== 4. QUÉ ES UNA SERIE DE TIEMPO ==================== -->
+<section class="slide" data-title="Qué hace distinta a una serie">
+  <div class="kicker">Concepto</div>
+  <h2>El orden de las observaciones es información</h2>
+  <div class="body">
+    <div class="two wide-left">
+      <div class="stack">
+        <p style="margin:0;color:var(--ink-2);font-size:19px">
+          Una serie de tiempo es una realización de un proceso estocástico observada en
+          instantes ordenados:
+        </p>
+        <div class="eq big" style="margin:4px 0">
+          {<span class="mi">y</span><sub>t</sub>}<sub><span class="mi">t</span>=1</sub><sup><span class="mi">T</span></sup>
+          &nbsp;=&nbsp; <span class="mi">y</span><sub>1</sub>, <span class="mi">y</span><sub>2</sub>,
+          …, <span class="mi">y</span><sub>T</sub>
+        </div>
+        <p style="margin:0;color:var(--ink-2);font-size:19px">
+          En una muestra de corte transversal podemos permutar las observaciones sin perder nada.
+          Aquí no: <b style="color:var(--ink)">permutar destruye el dato</b>. La dependencia entre
+          <span class="m"><span class="mi">y</span><sub>t</sub></span> y
+          <span class="m"><span class="mi">y</span><sub>t−1</sub></span> es justamente lo que
+          queremos medir.
+        </p>
+      </div>
+      <div class="stack">
+        <div class="panel accent">
+          <h3>Consecuencia práctica</h3>
+          <p>Los supuestos clásicos de MCO —errores independientes, muestreo aleatorio— dejan de
+             cumplirse. Necesitamos herramientas propias.</p>
+        </div>
+        <div class="panel">
+          <h3>Aplicaciones más allá de la economía</h3>
+          <p>Biología, epidemiología, mercados financieros, demografía, climatología: donde haya
+             mediciones repetidas en el tiempo, hay series de tiempo.</p>
+        </div>
+      </div>
+    </div>
+    <div class="note">
+      <b>Análisis gráfico:</b> el examen de los datos en una gráfica cuyo eje horizontal es el
+      tiempo. Es el primer paso de todo el curso, y casi nunca es un paso trivial.
+    </div>
+  </div>
+</section>
+
+<!-- ==================== 5. DOS ENFOQUES ==================== -->
+<section class="slide" data-title="Dos enfoques y cuatro objetivos">
+  <div class="kicker">Marco</div>
+  <h2>Dos enfoques para mirar la misma serie</h2>
+  <div class="body">
+    <div class="two">
+      <div class="panel">
+        <h3>Dominio del tiempo</h3>
+        <p>Lo que pasa hoy depende de lo que pasó ayer, y afectará lo que pase mañana.
+           Se modela la <b>dependencia entre periodos</b>: AR, MA, ARMA, VAR.</p>
+      </div>
+      <div class="panel">
+        <h3>Dominio de las frecuencias</h3>
+        <p>La serie es una suma de ciclos: estacionales, de negocios, de crisis. Se modela
+           qué tan importante es <b>cada frecuencia</b>: estacionalidad y filtros.</p>
+      </div>
+    </div>
+    <div class="three" style="margin-top:4px">
+      <div class="panel"><div class="lead">Describir</div><div class="cap">Tendencia, ciclo, estacionalidad, volatilidad.</div></div>
+      <div class="panel"><div class="lead">Pronosticar</div><div class="cap">Valores futuros con una medida de incertidumbre.</div></div>
+      <div class="panel"><div class="lead">Explicar</div><div class="cap">Relaciones dinámicas y respuesta a choques.</div></div>
+    </div>
+    <div class="note">
+      Este curso vive sobre todo en el dominio del tiempo, pero la unidad 4 (filtros y
+      desestacionalización) toma prestado del enfoque de frecuencias.
+    </div>
+  </div>
+</section>
+
+<!-- ==================== 6. LOS DATOS ==================== -->
+<section class="slide" data-title="Los datos de hoy">
+  <div class="kicker">Datos</div>
+  <h2>Seis series de la economía mexicana</h2>
+  <p class="dek">Mensuales, de enero de 2002 a mayo de 2025 — 281 observaciones por variable.
+     Es la base de <code>Clase_00</code>; hoy la usamos completa.</p>
+  <div class="body">
+    <table>
+      <tr><th>Variable</th><th>Qué mide</th><th>Unidad</th><th>Fuente</th></tr>
+      <tr><td><b>IGAE</b></td><td>Indicador Global de la Actividad Económica, total</td><td>Índice 2018 = 100</td><td>INEGI</td></tr>
+      <tr><td><b>IGAE primarias</b></td><td>IGAE de actividades primarias</td><td>Índice 2018 = 100</td><td>INEGI</td></tr>
+      <tr><td><b>ICC</b></td><td>Índice de Confianza del Consumidor</td><td>Puntos</td><td>INEGI</td></tr>
+      <tr><td><b>ICC 12 meses</b></td><td>Situación económica de hoy contra la de hace 12 meses</td><td>Puntos</td><td>INEGI</td></tr>
+      <tr><td><b>IPC BMV</b></td><td>Índice de Precios y Cotizaciones de la Bolsa Mexicana de Valores</td><td>Puntos</td><td>BMV</td></tr>
+      <tr><td><b>TDC</b></td><td>Tipo de cambio interbancario</td><td>Pesos por dólar</td><td>Banco de México</td></tr>
+    </table>
+    <div class="note">
+      En R: <code>read_excel()</code> para leer el archivo y
+      <code>ts(x, start = 2002, freq = 12)</code> para declarar la frecuencia mensual.
+      Sin ese segundo paso, R no sabe que los datos están ordenados en el tiempo.
+    </div>
+  </div>
+</section>
+
+<!-- ==================== 7. IGAE ==================== -->
+<section class="slide" data-title="IGAE: total y primarias">
+  <div class="kicker">Ejemplo 1 · Actividad económica</div>
+  <h2>Tendencia, ciclo y un choque que se ve a simple vista</h2>
+  <div class="body">
+    <div id="g-igae"></div>
+    <div class="two" style="gap:22px;margin-top:2px">
+      <div class="panel frag"><p><b>Tendencia y ciclo.</b> El IGAE total crece en el largo plazo,
+        pero con caídas nítidas en 2009 y 2020: la tendencia no basta para describirlo.</p></div>
+      <div class="panel frag"><p><b>Estacionalidad.</b> Las actividades primarias oscilan cada año
+        por el calendario agrícola; su desviación estándar es casi el doble que la del total.</p></div>
+    </div>
+  </div>
+  <div class="chrome-tag">Fuente: INEGI · ene-2002 a may-2025</div>
+</section>
+
+<!-- ==================== 8. ICC ==================== -->
+<section class="slide" data-title="Confianza del consumidor">
+  <div class="kicker">Ejemplo 2 · Expectativas</div>
+  <h2>No todo lo que se mide es producción</h2>
+  <div class="body">
+    <div id="g-icc"></div>
+    <div class="two" style="gap:22px;margin-top:2px">
+      <div class="panel frag"><p><b>Dos preguntas de la misma encuesta.</b> El índice general y la
+        comparación contra hace doce meses se mueven juntos, pero no con la misma amplitud.</p></div>
+      <div class="panel frag"><p><b>Series que se acompañan.</b> Cuando dos series comparten el
+        movimiento, la pregunta natural es si una anticipa a la otra: eso es la unidad 5.</p></div>
+    </div>
+  </div>
+  <div class="chrome-tag">Fuente: INEGI, Encuesta Nacional sobre Confianza del Consumidor</div>
+</section>
+
+<!-- ==================== 9. ESCALAS ==================== -->
+<section class="slide" data-title="El problema de las escalas">
+  <div class="kicker">Ejemplo 3 · Mercados financieros</div>
+  <h2>Dos series, dos escalas: no se grafican en un mismo eje</h2>
+  <div class="body">
+    <div class="two" style="gap:26px">
+      <div id="g-ipc"></div>
+      <div id="g-tdc"></div>
+    </div>
+    <div class="two" style="gap:22px">
+      <div class="panel frag"><p>El IPC se mide en decenas de miles de puntos y el tipo de cambio
+        en decenas de pesos. Con un eje compartido, una de las dos se aplasta contra el piso.</p></div>
+      <div class="panel accent frag"><p><b>Regla del curso:</b> nunca dos ejes verticales en una
+        misma gráfica. O dos paneles, o llevamos ambas series a una escala común.</p></div>
+    </div>
+  </div>
+  <div class="chrome-tag">Fuentes: Bolsa Mexicana de Valores y Banco de México</div>
+</section>
+
+<!-- ==================== 10. NÚMERO ÍNDICE ==================== -->
+<section class="slide" data-title="Solución 1: número índice">
+  <div class="kicker">Transformación 1</div>
+  <h2>Número índice: misma escala, mismo punto de partida</h2>
+  <div class="body">
+    <div class="two wide-right" style="gap:26px">
+      <div class="stack">
+        <div class="eq">
+          <span class="mi">I</span><sub>t</sub> = 100 ·
+          <span class="mi">y</span><sub>t</sub> / <span class="mi">y</span><sub>0</sub>
+          <span class="tag">base: ene-2002</span>
+        </div>
+        <p style="margin:0;color:var(--ink-2);font-size:18px">
+          Al dividir cada serie entre su primer valor, ambas empiezan en 100 y lo que se compara
+          es el <b style="color:var(--ink)">crecimiento acumulado</b>, no el nivel.
+        </p>
+        <div class="panel frag">
+          <p>En 23 años el IPC multiplicó su valor por <b>8.3</b> y el tipo de cambio por
+             <b>2.1</b>. Eso es lo que la gráfica dice, y lo que no se veía en niveles.</p>
+        </div>
+      </div>
+      <div id="g-idx"></div>
+    </div>
+    <div class="note">
+      Cuidado: el índice depende de la base elegida. Cambiar el mes base cambia el aspecto de la
+      gráfica, aunque no cambie ninguna tasa de crecimiento.
+    </div>
+  </div>
+</section>
+
+<!-- ==================== 11. DIFERENCIAS LOG ==================== -->
+<section class="slide" data-title="Solución 2: diferencias logarítmicas">
+  <div class="kicker">Transformación 2</div>
+  <h2>La diferencia logarítmica y la tasa de crecimiento</h2>
+  <div class="body">
+    <div class="two" style="gap:30px">
+      <div class="stack">
+        <div class="eq">
+          Δln(<span class="mi">y</span><sub>t</sub>) = ln(<span class="mi">y</span><sub>t</sub>)
+          − ln(<span class="mi">y</span><sub>t−1</sub>) = ln( <span class="mi">y</span><sub>t</sub> /
+          <span class="mi">y</span><sub>t−1</sub> ) <span class="tag">(1)</span>
+        </div>
+        <div class="eq">
+          TC<sub>t</sub> = ( <span class="mi">y</span><sub>t</sub> − <span class="mi">y</span><sub>t−1</sub> )
+          / <span class="mi">y</span><sub>t−1</sub> = <span class="mi">y</span><sub>t</sub> /
+          <span class="mi">y</span><sub>t−1</sub> − 1 <span class="tag">(2)</span>
+        </div>
+        <div class="eq frag">
+          <span class="mi">y</span><sub>t</sub> / <span class="mi">y</span><sub>t−1</sub> − 1
+          ≈ ln( <span class="mi">y</span><sub>t</sub> / <span class="mi">y</span><sub>t−1</sub> )
+          <span class="tag">(3)</span>
+        </div>
+      </div>
+      <div class="stack">
+        <div class="panel">
+          <h3>Por qué usamos (1) y no (2)</h3>
+          <p>La diferencia logarítmica es aditiva en el tiempo —las variaciones mensuales se suman
+             para dar la anual—, es simétrica ante subidas y bajadas, y suele producir una serie
+             mucho más cercana a la estacionariedad.</p>
+        </div>
+        <div class="panel accent frag">
+          <h3>Cuándo vale la aproximación</h3>
+          <p>Sólo cuando <span class="m"><span class="mi">y</span><sub>t</sub></span> y
+             <span class="m"><span class="mi">y</span><sub>t−1</sub></span> son parecidos, es decir,
+             cuando la variación es pequeña. Con cambios abruptos, (1) y (2) se separan.</p>
+        </div>
+      </div>
+    </div>
+    <div class="note">
+      Abril de 2020, IGAE: la tasa de crecimiento fue de <b>−18.9 %</b> y la diferencia logarítmica
+      de <b>−22.8 %</b>. Una brecha de casi cuatro puntos: la aproximación (3) ahí ya no sirve.
+    </div>
+  </div>
+</section>
+
+<!-- ==================== 12. GRÁFICA DIFF-LOG ==================== -->
+<section class="slide" data-title="Variaciones: tres series">
+  <div class="kicker">Transformación 2 · en los datos</div>
+  <h2>La misma información, vista como variación mensual</h2>
+  <div class="body">
+    <div class="stack" style="gap:2px">
+      <div id="g-dl-igae"></div>
+      <div id="g-dl-ipc"></div>
+      <div id="g-dl-tdc"></div>
+    </div>
+    <div class="note">
+      Los tres paneles comparten la misma escala vertical, así que la comparación es directa.
+      Desaparece la tendencia y aparece otra estructura: los movimientos grandes vienen <b>en
+      racimos</b> —2008-2009, marzo de 2020— y las épocas tranquilas se mantienen tranquilas.
+      Esa agrupación de la volatilidad es el punto de partida de los modelos ARCH y GARCH
+      de la unidad 7.
+    </div>
+  </div>
+  <div class="chrome-tag">Δln × 100, mensual · feb-2002 a may-2025</div>
+</section>
+
+<!-- ==================== 13. LO QUE YA SE VE ==================== -->
+<section class="slide" data-title="De la gráfica al modelo">
+  <div class="kicker">Puente</div>
+  <h2>Todo lo que vimos hoy tiene su unidad en el curso</h2>
+  <div class="body">
+    <table>
+      <tr><th>Lo que se ve en la gráfica</th><th>Cómo se llama</th><th>Herramienta</th><th>Sesión</th></tr>
+      <tr><td>La serie sube a lo largo de 23 años</td><td>Tendencia / raíz unitaria</td><td>Pruebas ADF y Phillips-Perron</td><td><b>13</b></td></tr>
+      <tr><td>Las primarias repiten un patrón anual</td><td>Estacionalidad</td><td>X-13ARIMA-SEATS</td><td><b>11</b></td></tr>
+      <tr><td>Caídas en 2009 y 2020, y su recuperación</td><td>Ciclo y choque</td><td>Filtro Hodrick-Prescott</td><td><b>12</b></td></tr>
+      <tr><td>El valor de hoy se parece al de ayer</td><td>Autocorrelación</td><td>FAC, FACP y modelos AR(p)</td><td><b>03–07</b></td></tr>
+      <tr><td>Los movimientos grandes vienen en racimos</td><td>Volatilidad agrupada</td><td>ARCH y GARCH</td><td><b>20</b></td></tr>
+      <tr><td>Las series se mueven juntas</td><td>Interdependencia</td><td>Granger, VAR e impulso-respuesta</td><td><b>14–17</b></td></tr>
+      <tr><td>Se separan pero nunca del todo</td><td>Relación de largo plazo</td><td>Cointegración y VECM</td><td><b>18</b></td></tr>
+    </table>
+    <div class="note">
+      La secuencia del curso no es arbitraria: cada fila de esta tabla necesita la anterior.
+      Antes de probar cointegración hay que saber detectar una raíz unitaria, y antes de eso,
+      leer una función de autocorrelación.
+    </div>
+  </div>
+</section>
+
+<!-- ==================== 14. MAPA DEL CURSO ==================== -->
+<section class="slide" data-title="Mapa del curso">
+  <div class="kicker">Programa</div>
+  <h2>Las diez unidades, en orden</h2>
+  <div class="body">
+    <div class="three" style="gap:16px">
+      <div class="stack" style="gap:10px">
+        <div class="panel"><h3>1 · Introducción</h3><p>La naturaleza del dato temporal. Ejemplos y transformaciones.</p></div>
+        <div class="panel"><h3>2 · Ecuaciones en diferencia</h3><p>Soluciones, operador de rezago, estabilidad.</p></div>
+        <div class="panel"><h3>3 · Procesos estacionarios</h3><p>AR, MA, ARMA, ARIMA, FAC y FACP, pronóstico.</p></div>
+        <div class="panel"><h3>4 · Procesos no estacionarios</h3><p>Raíz unitaria, tendencias, filtros y desestacionalización.</p></div>
+      </div>
+      <div class="stack" style="gap:10px">
+        <div class="panel"><h3>5 · Vectores autorregresivos</h3><p>Granger, VAR(p), impulso-respuesta, SVAR.</p></div>
+        <div class="panel"><h3>6 · Cointegración</h3><p>Engle-Granger, Johansen, corrección de errores.</p></div>
+        <div class="panel"><h3>7 · Volatilidad</h3><p>ARCH, GARCH y sus versiones multivariadas.</p></div>
+      </div>
+      <div class="stack" style="gap:10px">
+        <div class="panel"><h3>8 · Modelos ARDL</h3><p>Rezagos distribuidos y prueba de límites.</p></div>
+        <div class="panel"><h3>9 · Panel y Panel VAR</h3><p>Raíces unitarias en panel, diferencias en diferencias.</p></div>
+        <div class="panel"><h3>10 · No lineales</h3><p>Rompimientos y cambio de régimen (TAR).</p></div>
+        <div class="panel accent"><p><b>28 sesiones</b> con notebook, datos y ejercicios en el repositorio.</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== 15. CÓMO TRABAJAMOS ==================== -->
+<section class="slide" data-title="Cómo trabajamos">
+  <div class="kicker">Método</div>
+  <h2>Mitad pizarrón, mitad consola</h2>
+  <div class="body">
+    <div class="two" style="gap:26px">
+      <div class="stack">
+        <div class="panel"><h3>50 % teoría</h3><p>El modelo, sus supuestos y sus condiciones.
+          El pizarrón de cada sesión queda en OneNote.</p></div>
+        <div class="panel"><h3>50 % laboratorio</h3><p>El mismo modelo estimado en <b>R</b> con
+          RStudio y R Markdown, sobre datos mexicanos reales.</p></div>
+        <div class="panel accent"><h3>Antes de cada clase</h3><p><code>git pull</code> en el
+          repositorio: el material se actualiza durante el semestre.</p></div>
+      </div>
+      <div class="stack">
+        <div class="panel">
+          <h3>Dónde está cada cosa</h3>
+          <ul style="padding-left:20px;font-size:17px">
+            <li><b>Sitio del curso</b> — temario y sesiones: <a href="index.html">benjov.github.io/Series-Tiempo-2026</a></li>
+            <li><b>Notas de clase</b> — el texto, capítulo por capítulo</li>
+            <li><b>GitHub</b> — notebooks, datos y funciones</li>
+            <li><b>Google Drive</b> — temario, tareas, exámenes, bibliografía</li>
+            <li><b>YouTube</b> — grabaciones de cada sesión</li>
+            <li><b>Zoom</b> — transmisión en vivo, ID <span class="tnum">831 5770 0304</span></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div class="note">
+      Horario: <b>martes y jueves, 8:00 a 9:30</b>. Las sesiones se transmiten y se graban, pero el
+      laboratorio se aprovecha mucho mejor en vivo y con la computadora enfrente.
+    </div>
+  </div>
+</section>
+
+<!-- ==================== 16. EVALUACIÓN ==================== -->
+<section class="slide" data-title="Evaluación">
+  <div class="kicker">Acreditación</div>
+  <h2>Dos entregas, mismo peso</h2>
+  <div class="body">
+    <div class="two" style="gap:26px">
+      <div class="stack">
+        <table>
+          <tr><th>Actividad</th><th>Fecha tentativa</th><th class="num">Peso</th></tr>
+          <tr><td><b>Examen parcial</b><br><span class="muted" style="font-size:15px">Presencial</span></td>
+              <td>8 de octubre de 2026</td><td class="num"><b>50 %</b></td></tr>
+          <tr><td><b>Trabajo final</b><br><span class="muted" style="font-size:15px">Ensayo empírico</span></td>
+              <td>10 de diciembre de 2026</td><td class="num"><b>50 %</b></td></tr>
+        </table>
+      </div>
+      <div class="panel accent">
+        <h3>El trabajo final</h3>
+        <p>Un ensayo que aplique alguna de las técnicas del curso. Debe contener una
+           <b>hipótesis</b> y su prueba o refutación con datos. Los lineamientos completos se
+           entregan a la mitad del semestre.</p>
+        <p style="margin-top:10px">Sugerencia desde hoy: ve pensando en una serie que te interese
+           y empieza a reunir los datos. La pregunta es más difícil que el modelo.</p>
+      </div>
+    </div>
+    <div class="note">
+      Bibliografía base: <b>Enders (2015)</b>, <i>Applied Econometric Time Series</i>;
+      <b>Kirchgässner, Wolters y Hassler (2012)</b>, caps. 2 a 8;
+      <b>Brooks (2019)</b> para las aplicaciones financieras;
+      <b>Guerrero (2014)</b>, cap. 2, y <b>Lütkepohl (2005)</b> para la parte multivariada.
+    </div>
+  </div>
+</section>
+
+<!-- ==================== 17. PARA LA PRÓXIMA ==================== -->
+<section class="slide" data-title="Para la próxima sesión">
+  <div class="kicker">Tarea cero</div>
+  <h2>Antes del primer laboratorio</h2>
+  <div class="body">
+    <div class="two" style="gap:26px">
+      <div class="stack">
+        <div class="panel">
+          <h3>1 · Instala</h3>
+          <p>R y RStudio, en ese orden. Ambos son gratuitos y multiplataforma.</p>
+        </div>
+        <div class="panel">
+          <h3>2 · Clona el repositorio</h3>
+          <p><code>git clone https://github.com/benjov/Series-Tiempo-2026.git</code></p>
+        </div>
+        <div class="panel">
+          <h3>3 · Corre <code>Clase_00.Rmd</code></h3>
+          <p>Debe reproducir las gráficas que vimos hoy. Si pide paquetes, instálalos.</p>
+        </div>
+      </div>
+      <div class="panel">
+        <h3>Ejercicios de Clase_00</h3>
+        <ol style="padding-left:20px;font-size:18px;color:var(--ink-2)">
+          <li>¿En qué mes y año alcanzó el IPC de la BMV su valor máximo? Usa <code>which.max()</code>.</li>
+          <li>Calcula la variación porcentual promedio anual del tipo de cambio en toda la muestra.
+              ¿En qué periodo fue más volátil?</li>
+          <li>Aplica <code>diff(..., lag = 12)</code> al IGAE para obtener la variación anual en
+              lugar de la mensual. ¿Cómo cambia la gráfica y por qué?</li>
+        </ol>
+      </div>
+    </div>
+    <div class="note">
+      Si nunca has usado R, empieza por <b>Clase_IntroR</b>; si quieres el panorama de herramientas
+      del curso, revisa <b>Clase_ToolBox</b>. Los dos están enlazados en el sitio.
+    </div>
+  </div>
+</section>
+
+<!-- ==================== 18. CIERRE ==================== -->
+<section class="slide cover" data-title="Cierre">
+  <div class="kicker">Sesión 1 · Fin</div>
+  <h1 style="font-size:50px">Nos vemos en el laboratorio</h1>
+  <p class="sub">Unidad 2: elementos de ecuaciones en diferencia — la maquinaria detrás de
+     los procesos AR.</p>
+  <div class="rule"></div>
+  <div class="who">
+    <b>Benjamín Oliva</b> · benjov@ciencias.unam.mx<br>
+    <b>Omar Alfaro</b> · omarxalpha@gmail.com
+  </div>
+  <div class="where">
+    Materiales, temario y las 28 sesiones: <a href="index.html">sitio del curso</a> &nbsp;·&nbsp;
+    <a href="https://github.com/benjov/Series-Tiempo-2026">repositorio</a>
+  </div>
+</section>
+
+<div class="chrome-num"></div>
+<div class="progress"></div>
+</div><!-- /stage -->
+</div><!-- /stage-wrap -->
+
+<!-- ==================== CROMO ==================== -->
+<div class="controls">
+  <button type="button" data-nav="prev" title="Anterior (←)" aria-label="Diapositiva anterior">←</button>
+  <button type="button" data-nav="next" title="Siguiente (→)" aria-label="Diapositiva siguiente">→</button>
+  <button type="button" data-nav="indice" title="Índice (o)" aria-label="Índice de diapositivas">☰</button>
+  <button type="button" class="theme-btn" data-theme-toggle title="Tema (t)" aria-label="Cambiar tema">
+    <span class="i-sun" aria-hidden="true">☀</span><span class="i-moon" aria-hidden="true">☾</span>
+  </button>
+  <button type="button" data-nav="full" title="Pantalla completa (f)" aria-label="Pantalla completa">⛶</button>
+  <button type="button" data-nav="ayuda" title="Ayuda (?)" aria-label="Ayuda">?</button>
+</div>
+
+<div class="overlay" id="indice">
+  <h2>Índice de la sesión</h2>
+  <div class="ov-grid"></div>
+</div>
+
+<div class="overlay" id="ayuda">
+  <h2>Atajos de teclado</h2>
+  <div class="help-list">
+    <div><kbd>→</kbd><kbd>espacio</kbd> Avanzar</div>
+    <div><kbd>←</kbd> Retroceder</div>
+    <div><kbd>Inicio</kbd><kbd>Fin</kbd> Primera / última</div>
+    <div><kbd>o</kbd> Índice de diapositivas</div>
+    <div><kbd>f</kbd> Pantalla completa</div>
+    <div><kbd>t</kbd> Tema claro / oscuro</div>
+    <div><kbd>c</kbd> Cronómetro de la sesión</div>
+    <div><kbd>?</kbd> Esta ayuda · <kbd>Esc</kbd> cerrar</div>
+  </div>
+  <p class="muted" style="margin-top:18px;font-size:14px;max-width:70ch">
+    Las gráficas son interactivas: al pasar el puntero se muestra el valor de cada serie en el mes
+    señalado. Para exportar la presentación a PDF, imprime la página (⌘P) con fondo de gráficos
+    activado y orientación horizontal.
+  </p>
+</div>
+
+<script src="assets/js/theme.js"></script>
+<script src="assets/data/series.js"></script>
+<script src="assets/js/charts.js"></script>
+<script>
+(function () {
+  var S = window.SERIES;
+  if (!S || !window.Charts) return;
+  var P = S.periodo;
+  var fuente = "Elaboración propia con datos de INEGI, Banco de México y la BMV · " +
+               "código en <code>Clase_00</code>";
+
+  /* --- IGAE total y actividades primarias --- */
+  Charts.line(document.getElementById("g-igae"), {
+    periods: P, width: 1130, height: 300, yearStep: 2, yTicks: 5,
+    series: [
+      { name: "IGAE total", values: S.igae, c: 1, label: "Total" },
+      { name: "IGAE actividades primarias", values: S.igae_prim, c: 2, label: "Primarias" }
+    ],
+    unit: "", tipDecimals: 1,
+    caption: "Índice 2018 = 100. " + fuente
+  });
+
+  /* --- Confianza del consumidor --- */
+  Charts.line(document.getElementById("g-icc"), {
+    periods: P, width: 1130, height: 300, yearStep: 2, yTicks: 5,
+    series: [
+      { name: "ICC general", values: S.icc, c: 1, label: "General" },
+      { name: "Situación de hoy contra hace 12 meses", values: S.icc_lag, c: 2, label: "12 meses" }
+    ],
+    tipDecimals: 1,
+    caption: "Puntos del índice. " + fuente
+  });
+
+  /* --- Niveles en paneles separados (nunca dos ejes) --- */
+  Charts.line(document.getElementById("g-ipc"), {
+    periods: P, width: 540, height: 250, yearStep: 6, endLabels: false,
+    plotTitle: "IPC de la BMV — puntos",
+    series: [{ name: "IPC BMV", values: S.ipc, c: 2 }],
+    tipDecimals: 0
+  });
+  Charts.line(document.getElementById("g-tdc"), {
+    periods: P, width: 540, height: 250, yearStep: 6, endLabels: false,
+    plotTitle: "Tipo de cambio — pesos por dólar",
+    series: [{ name: "Tipo de cambio", values: S.tdc, c: 3 }],
+    tipDecimals: 2
+  });
+
+  /* --- Ambas series reindexadas a ene-2002 = 100 --- */
+  Charts.line(document.getElementById("g-idx"), {
+    periods: P, width: 660, height: 330, yearStep: 4,
+    series: [
+      { name: "Índice del IPC", values: Charts.indexar(S.ipc), c: 2, label: "IPC" },
+      { name: "Índice del TDC", values: Charts.indexar(S.tdc), c: 3, label: "TDC" }
+    ],
+    tipDecimals: 0,
+    caption: "Ambas series, ene-2002 = 100."
+  });
+
+  /* --- Diferencias logarítmicas: tres paneles apilados --- */
+  var dl = [
+    ["g-dl-igae", "IGAE", S.igae, 1],
+    ["g-dl-ipc", "IPC de la BMV", S.ipc, 2],
+    ["g-dl-tdc", "Tipo de cambio", S.tdc, 3]
+  ];
+  dl.forEach(function (d, k) {
+    Charts.line(document.getElementById(d[0]), {
+      periods: P, width: 1130, height: k === 2 ? 142 : 124,
+      yearStep: 2, endLabels: false, xLabels: k === 2,
+      plotTitle: d[1] + " — Δln × 100",
+      padTop: 22, padLeft: 44, yMin: -25, yMax: 20, yTicks: 3, yDecimals: 0,
+      series: [{ name: d[1], values: Charts.diffLog(d[2]), c: d[3] }],
+      unit: "%", tipDecimals: 1
+    });
+  });
+})();
+</script>
+<script src="assets/js/slides.js"></script>
+</body>
+</html>

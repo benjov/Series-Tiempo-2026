@@ -3,7 +3,12 @@ title: "Clase 0. Introducción a las Series de Tiempo"
 subtitle: "Series de Tiempo | Semestre 2027-I | FC-UNAM"
 author: "Benjamin Oliva"
 date: "`r format(Sys.Date(), '%B %Y')`"
-output: html_document
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    theme: flatly
+    code_folding: show
 editor_options:
   chunk_output_type: inline
 ---

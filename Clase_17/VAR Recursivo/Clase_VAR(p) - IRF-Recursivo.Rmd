@@ -1,11 +1,14 @@
 ---
-title: "Clase_VAR(p) - IRF-Recursivo"
+title: "Clase 17. VAR(p) — IRF Recursivo (SVAR)"
 subtitle: "Series de Tiempo | Semestre 2027-I | FC-UNAM"
 author: "Benjamin Oliva & Luis Gerardo Ruiz González"
 date: "`r format(Sys.Date(), '%B %Y')`"
 output:
-  pdf_document:
+  html_document:
     toc: true
+    toc_float: true
+    theme: flatly
+    code_folding: show
 editor_options:
   chunk_output_type: inline
 ---
@@ -25,7 +28,8 @@ Al terminar esta clase deberás poder:
 ---
 
 ```{r}
-setwd("/Users/gerardoruiz/Desktop/Códigos_Series-Tiempo/VAR Recursivo") # Cambiar a la ruta local
+# En un .Rmd el directorio de trabajo es la carpeta del propio archivo,
+# de modo que las rutas relativas funcionan sin setwd().
 Sys.setlocale("LC_TIME", "es_ES.UTF-8")
 
 # ===================================================================
