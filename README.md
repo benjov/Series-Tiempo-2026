@@ -116,4 +116,43 @@ Rscript utils/exporta_series_web.R
 ```
 
 No hay paso de compilación: basta con hacer `git push` para que los cambios queden publicados.
-Todo funciona también abriendo los archivos directamente desde el disco, sin conexión.
+GitHub tarda unos minutos en reconstruir el sitio, así que conviene empujar con margen antes de
+la clase. Todo funciona también abriendo los archivos directamente desde el disco, sin conexión.
+
+### Cómo usar las diapositivas
+
+| Tecla | Acción |
+|---|---|
+| `→` `espacio` / `←` | Avanzar / retroceder (los puntos marcados aparecen uno a uno) |
+| `Inicio` / `Fin` | Primera / última diapositiva |
+| `o` | Índice de diapositivas |
+| `f` | Pantalla completa |
+| `t` | Tema claro / oscuro |
+| `c` | Cronómetro de la sesión |
+| `?` | Ayuda |
+
+Las gráficas son interactivas: al pasar el puntero se muestra el valor de cada serie en el mes
+señalado. Para exportar a PDF, imprimir la página (⌘P) en horizontal y con "gráficos de fondo"
+activado: cada diapositiva sale en su propia página de 16:9.
+
+### Cómo hacer diapositivas de otra sesión
+
+El motor es genérico, así que una presentación nueva es un HTML que copia la estructura de
+`clase-01.html`:
+
+1. Copiar `clase-01.html` con otro nombre (por ejemplo `clase-13.html`).
+2. Cada lámina es una `<section class="slide" data-title="…">`; el `data-title` es lo que
+   aparece en el índice. La portada y el cierre llevan además la clase `cover`.
+3. Dentro de la lámina: `.kicker` (etiqueta superior), `<h2>` (título), `.dek` (entrada),
+   `.body` (contenido) y `.note` (la línea al pie). Para maquetar hay `.two`, `.three`,
+   `.stack`, `.panel`, `.panel.accent`, `.qcard` y tablas simples.
+4. Un elemento con clase `frag` aparece hasta el siguiente avance; sirve para construir la
+   lámina por partes.
+5. Para una gráfica: un `<div id="mi-grafica">` y una llamada a `Charts.line()` al final del
+   archivo. Recibe `periods`, `series` (hasta tres, con `c: 1|2|3` para el color) y opciones de
+   ejes; `Charts.indexar()` y `Charts.diffLog()` transforman una serie antes de graficarla.
+6. Enlazar la presentación desde `index.html`.
+
+Los colores de serie (`--s1` azul, `--s2` naranja, `--s3` verde) están validados para contraste
+y daltonismo en ambos temas: conviene usarlos en ese orden y no meter una cuarta serie en la
+misma gráfica.
