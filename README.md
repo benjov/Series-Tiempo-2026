@@ -2,6 +2,13 @@
 
 Repositorio de scripts, notebooks y materiales de apoyo para el curso **Análisis de Series de Tiempo** (semestre 2027-I) de la Facultad de Economía, UNAM.
 
+## Clase en vivo (Zoom)
+
+**https://cuaed-unam-mx.zoom.us/j/86435202686**
+
+Martes y jueves, 20:00 a 21:30 h. ID de reunión: `864 3520 2686`. Las sesiones se graban y se
+publican en la [lista de YouTube](https://www.youtube.com/playlist?list=PLlCKfRj1U6Swy56X0WAHPhQS4WhA_P-9U).
+
 ## Sitio del curso
 
 **https://benjov.github.io/Series-Tiempo-2026/**
@@ -34,12 +41,13 @@ Cada carpeta corresponde a una sesión del curso. Los datos y funciones comparti
 
 ## Recursos del curso
 
-1. **Sitio del curso** (temario, sesiones y diapositivas): https://benjov.github.io/Series-Tiempo-2026/
-2. **Notas de clase:** https://benjov.github.io/Series-Tiempo/index.html
-3. **Este repositorio** (scripts y R Markdown): clonar y actualizar con `git pull`
-4. **Google Drive** (temario, tareas, exámenes, bibliografía): https://drive.google.com/drive/folders/1hIO60B2-7wxbZ5C00myFlYL_hNVdGpDt?usp=sharing
-5. **Pizarras de clase:** https://gamesecon-my.sharepoint.com/:o:/p/boliva/IgCs7koSvNxhQrj7aQW35ujrAVF0mQqV3B4OCF2PnyJRsco?e=StVEMs
-6. **Grabaciones de clase:** https://www.youtube.com/playlist?list=PLlCKfRj1U6Swy56X0WAHPhQS4WhA_P-9U
+1. **Sesión de Zoom** (transmisión en vivo, martes y jueves): https://cuaed-unam-mx.zoom.us/j/86435202686 — ID de reunión: `864 3520 2686`
+2. **Sitio del curso** (temario, sesiones y diapositivas): https://benjov.github.io/Series-Tiempo-2026/
+3. **Notas de clase:** https://benjov.github.io/Series-Tiempo/index.html
+4. **Este repositorio** (scripts y R Markdown): clonar y actualizar con `git pull`
+5. **Google Drive** (temario, tareas, exámenes, bibliografía): https://drive.google.com/drive/folders/1hIO60B2-7wxbZ5C00myFlYL_hNVdGpDt?usp=sharing
+6. **Pizarras de clase:** https://gamesecon-my.sharepoint.com/:o:/p/boliva/IgCs7koSvNxhQrj7aQW35ujrAVF0mQqV3B4OCF2PnyJRsco?e=StVEMs
+7. **Grabaciones de clase:** https://www.youtube.com/playlist?list=PLlCKfRj1U6Swy56X0WAHPhQS4WhA_P-9U
 
 ## Temario
 
