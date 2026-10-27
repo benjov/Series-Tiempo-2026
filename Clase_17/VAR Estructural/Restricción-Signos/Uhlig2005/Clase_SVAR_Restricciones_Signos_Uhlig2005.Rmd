@@ -1,0 +1,261 @@
+---
+title: "Clase 17. SVAR con restricciones de signo — Uhlig (2005)"
+subtitle: "Series de Tiempo | Semestre 2027-I | FC-UNAM"
+author: "Benjamin Oliva & Luis Gerardo Ruiz González"
+date: "`r format(Sys.Date(), '%B %Y')`"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    theme: flatly
+    code_folding: show
+editor_options:
+  chunk_output_type: inline
+---
+
+## ¿Qué aprenderemos hoy?
+
+Replicamos en R la Figura 6 de Uhlig (2005, *Journal of Monetary Economics*): ¿qué le pasa al producto después de un choque de política monetaria contractivo, si **no** imponemos ninguna restricción sobre la respuesta del producto? En lugar de ceros, identificamos el choque con **signos**: la tasa de fondos federales sube y los precios y las reservas no prestadas bajan durante seis meses. Esta versión sustituye a `GO_Uhlig2005.m` (VAR Toolbox de Cesa-Bianchi en MATLAB) y programa el algoritmo paso a paso, sin cajas negras.
+
+Al terminar esta clase deberás poder:
+
+1. Explicar por qué las restricciones de signo identifican un **conjunto** de modelos y no uno solo
+2. Programar el algoritmo de rotaciones aleatorias (matriz $Q$ ortogonal) y el muestreo de la posterior del VAR
+3. Interpretar las bandas de una IRF identificada por signos y sus limitaciones
+
+**Datos:** `Uhlig2005_Data.xlsx` (mensual, EE.UU., ene-1965 a dic-2003, 468 observaciones). Es la base de Bernanke y Mihov (1998) extendida a 2003, la misma del artículo.
+
+---
+
+## 1. De ceros a signos
+
+En la identificación recursiva y en la de Blanchard-Quah buscamos **una** matriz $B$ con $BB' = \Sigma_u$. Hay muchas: si $P = \text{chol}(\Sigma_u)$ y $Q$ es cualquier matriz ortogonal ($QQ' = I$), entonces
+
+$$
+B = PQ \quad\Longrightarrow\quad BB' = P\,QQ'\,P' = PP' = \Sigma_u .
+$$
+
+Los datos no distinguen entre $P$ y $PQ$: todas producen la misma verosimilitud. Las restricciones de ceros escogen una $Q$ en particular. Uhlig propone otra cosa: **aceptar todas** las $Q$ cuyas IRF tengan los signos que predice la teoría y descartar las demás. El resultado ya no es una IRF, sino una distribución de IRF compatibles con los datos *y* con los signos.
+
+Para un choque de política monetaria contractivo, Uhlig pide que durante los meses $h = 0, 1, \dots, 5$:
+
+| Variable | Signo impuesto |
+|---|---|
+| PIB real | **Libre**: es la pregunta del artículo |
+| Deflactor del PIB | $\leq 0$ |
+| Índice de precios de materias primas | $\leq 0$ |
+| Reservas totales | Libre |
+| Reservas no prestadas | $\leq 0$ |
+| Tasa de fondos federales | $\geq 0$ |
+
+El algoritmo (Uhlig, 2005, Apéndice B; Rubio-Ramírez, Waggoner y Zha, 2010) es:
+
+1. Tomar una extracción $(A, \Sigma_u)$ de la posterior del VAR.
+2. Generar una matriz $W$ con entradas $N(0,1)$ y obtener $Q$ de su descomposición QR; $Q$ es una rotación aleatoria uniforme.
+3. Calcular $B = PQ$ y las IRF de los primeros 6 meses para cada columna de $B$.
+4. Si alguna columna (o su negativo) cumple todos los signos, guardar esa IRF; si no, volver al paso 2.
+5. Repetir hasta tener 500 extracciones aceptadas y reportar la mediana y los percentiles 16 y 84 en cada horizonte.
+
+## 2. Paquetes y datos
+
+```{r}
+if (!require(pacman)) install.packages("pacman")
+library(pacman)
+p_load("readxl", "vars", "dplyr", "tidyr", "ggplot2", "knitr")
+
+# La primera fila del Excel tiene nombres largos y la segunda los cortos:
+uh <- read_excel("Uhlig2005_Data.xlsx", skip = 1)
+names(uh)[1] <- "fecha"
+uh <- uh %>%
+  mutate(across(-fecha, as.numeric))
+
+head(uh)
+nrow(uh)
+```
+
+| Variable | Descripción | Unidad en el Excel | Transformación |
+|---|---|---|---|
+| `fecha` | Mes (`1965m1`, ..., `2003m12`) | — | — |
+| `y` | PIB real, interpolado a frecuencia mensual con la producción industrial | Logaritmo | × 100 |
+| `pi` | Deflactor del PIB, interpolado a frecuencia mensual | Logaritmo | × 100 |
+| `comm` | Índice de precios de materias primas | Logaritmo | × 100 |
+| `res` | Reservas totales | Logaritmo | × 100 |
+| `nbres` | Reservas no prestadas | Logaritmo | × 100 |
+| `ff` | Tasa de fondos federales | % anual | Nivel |
+
+Al multiplicar los logaritmos por 100, una respuesta de 0.1 se lee como 0.1% de desviación del nivel. Uhlig estima el VAR **en niveles** (sin diferenciar): no busca pronosticar, sino conservar posibles relaciones de largo plazo entre las variables; las estimaciones siguen siendo consistentes aunque haya raíces unitarias (Sims, Stock y Watson, 1990).
+
+```{r}
+vars_log <- c("y", "pi", "comm", "nbres", "res")
+uh <- uh %>%
+  mutate(across(all_of(vars_log), ~ 100 * .x))
+
+vnames <- c("y", "pi", "comm", "res", "nbres", "ff")
+nombres <- c(y = "PIB real", pi = "Deflactor del PIB", comm = "Precios de materias primas",
+             res = "Reservas totales", nbres = "Reservas no prestadas", ff = "Tasa de fondos federales")
+```
+
+## 3. VAR reducido
+
+Como en el artículo: 12 rezagos y constante, sin tendencia.
+
+```{r}
+p <- 12
+n <- length(vnames)
+var.uh <- vars::VAR(uh[, vnames], p = p, type = "const")
+max(roots(var.uh))
+```
+
+Para el muestreo de la posterior necesitamos el VAR en forma matricial, $Y = Z\,F + U$, donde cada renglón de $Z$ es $(1, Y_{t-1}', \dots, Y_{t-12}')$:
+
+```{r}
+Y <- as.matrix(var.uh$datamat[, vnames])
+Z <- as.matrix(var.uh$datamat[, -(1:n)])
+Z <- cbind(const = Z[, "const"], Z[, colnames(Z) != "const"])   # constante en la primera columna
+T.obs <- nrow(Y)
+
+ZtZ.inv <- solve(crossprod(Z))
+F.hat   <- ZtZ.inv %*% crossprod(Z, Y)                            # (1 + n p) x n
+U.hat   <- Y - Z %*% F.hat
+Sig.hat <- crossprod(U.hat) / (T.obs - ncol(Z))
+
+# Comprobación: los mismos coeficientes que estima vars::VAR()
+all.equal(unname(F.hat[, "y"]),
+          unname(coef(var.uh)$y[c("const", colnames(Z)[-1]), "Estimate"]),
+          tolerance = 1e-6)
+```
+
+## 4. Funciones del algoritmo
+
+```{r}
+# IRF de H periodos (h = 0, ..., H-1) para la matriz de impacto B.
+# Psi_0 = I y Psi_h = sum_j A_j Psi_{h-j}: la representación MA del VAR (Clase 16).
+irf_var <- function(F, B, H) {
+  A   <- t(F[-1, , drop = FALSE])                   # n x (n p): [A_1, ..., A_p]
+  Psi <- array(0, c(n, n, H))
+  Psi[, , 1] <- diag(n)
+  for (h in 2:H) {
+    for (j in 1:min(p, h - 1)) {
+      Psi[, , h] <- Psi[, , h] + A[, ((j - 1) * n + 1):(j * n)] %*% Psi[, , h - j]
+    }
+  }
+  out <- array(NA, c(H, n, ncol(B)))                # horizonte x variable x choque
+  for (h in 1:H) out[h, , ] <- Psi[, , h] %*% B
+  out
+}
+
+# Rotación ortogonal aleatoria uniforme (distribución de Haar).
+# Normalizar con el signo de la diagonal de R hace que Q sea uniforme.
+rotacion <- function(n) {
+  qr.W <- qr(matrix(rnorm(n * n), n, n))
+  qr.Q(qr.W) %*% diag(sign(diag(qr.R(qr.W))))
+}
+
+# Extracción de la posterior con prior plana (Normal-Wishart inversa):
+# Sigma^{-1} ~ Wishart(T, (T Sigma.hat)^{-1}) y vec(F) | Sigma ~ N(vec(F.hat), Sigma ⊗ (Z'Z)^{-1})
+extrae_posterior <- function() {
+  Sig.d <- solve(rWishart(1, T.obs, solve(Sig.hat) / T.obs)[, , 1])
+  V     <- kronecker(Sig.d, ZtZ.inv)
+  F.d   <- as.numeric(F.hat) + t(chol(V)) %*% rnorm(length(F.hat))
+  list(F = matrix(F.d, nrow(F.hat), n), Sigma = Sig.d)
+}
+```
+
+## 5. Restricciones de signo
+
+La matriz `SIGN` es la misma que en `GO_Uhlig2005.m`: `+1` positiva, `-1` negativa y `0` libre, impuestas en los meses 0 a 5.
+
+```{r}
+SIGN <- c(y = 0, pi = -1, comm = -1, res = 0, nbres = -1, ff = 1)
+H.sr <- 6     # meses en los que se imponen los signos (VARopt.sr_hor)
+
+# ¿La IRF (H.sr x n) cumple los signos? Los ceros de SIGN no restringen nada.
+cumple <- function(ir) all(sweep(ir, 2, SIGN, `*`) >= 0)
+```
+
+```{r}
+set.seed(2005)
+n.draws <- 500     # extracciones aceptadas (VARopt.ndraws)
+H       <- 60      # horizonte de las IRF (VARopt.nsteps)
+IR      <- array(NA, c(H, n, n.draws), dimnames = list(NULL, vnames, NULL))
+aceptadas <- 0
+intentos  <- 0
+
+while (aceptadas < n.draws) {
+  post <- extrae_posterior()
+  P    <- t(chol(post$Sigma))
+  for (r in 1:500) {                                # VARopt.sr_rot
+    B  <- P %*% rotacion(n)
+    ir <- irf_var(post$F, B, H.sr)
+    intentos <- intentos + 1
+    b <- NULL
+    for (k in 1:n) {
+      if (cumple(ir[, , k]))  { b <-  B[, k]; break }
+      if (cumple(-ir[, , k])) { b <- -B[, k]; break }
+    }
+    if (!is.null(b)) break
+  }
+  if (!is.null(b)) {
+    aceptadas <- aceptadas + 1
+    IR[, , aceptadas] <- irf_var(post$F, matrix(b), H)[, , 1]
+  }
+}
+
+c(aceptadas = aceptadas, rotaciones = intentos,
+  tasa_aceptacion = round(aceptadas / intentos, 3))
+```
+
+Sólo una fracción de las rotaciones cumple los signos: las restricciones sí tienen contenido. Si fueran demasiado estrictas, la tasa de aceptación se acercaría a cero; si fueran demasiado laxas (por ejemplo, sólo `ff` > 0), casi todo se aceptaría y las bandas serían muy anchas.
+
+## 6. Replicación de la Figura 6
+
+```{r, fig.width = 9, fig.height = 10}
+resumen <- function(f) apply(IR, c(1, 2), f)
+df.uh <- bind_rows(
+  as.data.frame(resumen(median))                       %>% mutate(mes = 1:H, stat = "med"),
+  as.data.frame(resumen(function(x) quantile(x, 0.16))) %>% mutate(mes = 1:H, stat = "inf"),
+  as.data.frame(resumen(function(x) quantile(x, 0.84))) %>% mutate(mes = 1:H, stat = "sup")) %>%
+  pivot_longer(all_of(vnames), names_to = "variable") %>%
+  pivot_wider(names_from = stat, values_from = value) %>%
+  mutate(variable = factor(nombres[variable], levels = nombres[c("y", "res", "pi", "nbres", "comm", "ff")]))
+
+ggplot(df.uh, aes(x = mes)) +
+  geom_ribbon(aes(ymin = inf, ymax = sup), fill = "#8db3d6") +
+  geom_line(aes(y = med), colour = "#0b2f4f", linewidth = 1.1) +
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  annotate("rect", xmin = 1, xmax = H.sr, ymin = -Inf, ymax = Inf, alpha = 0.08) +
+  facet_wrap(~ variable, ncol = 2, scales = "free_y") +
+  labs(x = "Meses", y = NULL,
+       title = "Uhlig (2005), Figura 6: choque de política monetaria contractivo",
+       subtitle = "Mediana y percentiles 16-84 de 500 extracciones; zona sombreada: meses con signos impuestos") +
+  theme_minimal()
+```
+
+```{r}
+# Medianas en meses seleccionados (comparables con Uhligh_Replication.pdf, generado en MATLAB)
+mediana <- resumen(median)
+kable(round(mediana[c(1, 3, 6, 12, 24, 48, 60), ], 3),
+      col.names = nombres[vnames])
+```
+
+El resultado coincide con el del Toolbox de MATLAB (`Uhligh_Replication.pdf`): mismas formas, magnitudes y bandas muy parecidas, con diferencias de centésimas en las medianas que vienen de la simulación (500 extracciones con otro generador de números aleatorios). La más visible es el impacto sobre el PIB (alrededor de 0.18 aquí y 0.11 en MATLAB), muy dentro de unas bandas que van de 0 a 0.3.
+
+**Lectura.**
+
+- La tasa de fondos federales sube unos 0.2-0.3 puntos y regresa a cero en poco más de un año; los precios caen de forma gradual y persistente (el deflactor sigue bajando a los 5 años), y las materias primas caen más rápido.
+- **El PIB no cae.** La mediana es positiva; en los primeros meses incluso la banda completa queda por arriba de cero, y a partir del medio año la banda incluye al cero. La conclusión de Uhlig es que, una vez que la caída no se impone por construcción, "the effects of monetary policy shocks on real output are ambiguous" y "neutrality of monetary policy shocks is not inconsistent with the data".
+- Compara con la Clase 16 y con la identificación recursiva: si se pone la tasa de interés al final de un orden de Cholesky, el PIB suele caer, pero en parte porque el orden impide que responda en el mismo mes.
+
+## 7. Limitaciones
+
+- **Las bandas no son intervalos de confianza de una IRF.** Mezclan dos fuentes de incertidumbre: la de muestreo (posterior de $A$ y $\Sigma_u$) y la de identificación (muchas $Q$ compatibles). Aunque tuviéramos muestra infinita, las bandas no se cerrarían.
+- **La mediana punto a punto no es una IRF.** En cada mes puede venir de un modelo distinto; Fry y Pagan (2011) proponen reportar el modelo cuya IRF está más cerca de las medianas.
+- **La rotación uniforme no es neutral.** Baumeister y Hamilton (2015) muestran que la "prior plana" sobre $Q$ implica una prior informativa sobre las IRF, que puede pesar más que los datos.
+
+---
+
+## Ejercicios
+
+1. Impón los signos sólo en el impacto (`H.sr <- 1`) y vuelve a correr el algoritmo. ¿Cómo cambian la tasa de aceptación y la anchura de las bandas? ¿Por qué?
+2. Agrega la restricción de que el PIB **no aumente** en los meses 0 a 5 (`SIGN["y"] <- -1`). ¿Qué tanto cae entonces? Discute por qué este ejercicio no sirve para contestar la pregunta del artículo.
+3. Reestima el VAR con el orden `y, pi, comm, ff, nbres, res` (Christiano, Eichenbaum y Evans, 1999) e identifica el choque monetario de forma recursiva con `vars::irf(..., impulse = "ff", ortho = TRUE)`. ¿La IRF recursiva cae dentro de las bandas de la Sección 6? ¿Qué te dice eso sobre las restricciones de ceros?

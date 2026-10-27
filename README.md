@@ -34,6 +34,7 @@ Cada carpeta corresponde a una sesión del curso. Los datos y funciones comparti
 | `Clase_ToolBox/` | Herramientas complementarias (LLMs, GPT API) |
 | `Clase_00/` | Motivación y ejemplos de series de tiempo |
 | `Clase_01/`–`Clase_20/` | Temas del temario (ver abajo) |
+| `Clase_17/` | VAR estructural en R: recursivo (Cholesky), largo plazo (Blanchard-Quah, 1989) y restricciones de signo (Uhlig, 2005); la Toolbox MATLAB se conserva sólo como referencia |
 | `Clase_21/` | Datos Panel: pruebas de raíz unitaria (IPS, LLC) |
 | `Clase_21b/` | Datos Panel: Diferencias en Diferencias (DiD) |
 | `Clase_22/` | Panel VAR(p) |

@@ -1,0 +1,189 @@
+---
+title: "Clase 17. SVAR con restricciones de largo plazo — Blanchard y Quah (1989)"
+subtitle: "Series de Tiempo | Semestre 2027-I | FC-UNAM"
+author: "Benjamin Oliva & Luis Gerardo Ruiz González"
+date: "`r format(Sys.Date(), '%B %Y')`"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    theme: flatly
+    code_folding: show
+editor_options:
+  chunk_output_type: inline
+---
+
+## ¿Qué aprenderemos hoy?
+
+Replicamos en R la Figura 2 de Blanchard y Quah (1989, *AER*), el ejemplo clásico de identificación con **restricciones de largo plazo**: un choque de demanda puede mover el PIB en el corto plazo, pero no tiene efecto sobre su nivel en el largo plazo; sólo el choque de oferta lo tiene. Esta versión sustituye a `GO_BQ1989.m` (VAR Toolbox de Cesa-Bianchi en MATLAB) y reproduce sus resultados.
+
+Al terminar esta clase deberás poder:
+
+1. Explicar por qué una restricción sobre la **suma** de las respuestas identifica los choques estructurales
+2. Estimar un SVAR de largo plazo con `vars::BQ()` y obtener la respuesta del **nivel** del PIB acumulando la respuesta de su tasa de crecimiento
+3. Contrastar este esquema con la identificación recursiva de la clase anterior
+
+**Datos:** `BQ1989_Data.xlsx` (trimestral, EE.UU., 1948T2 a 1987T4, 159 observaciones)
+
+---
+
+## 1. La idea de Blanchard y Quah
+
+El VAR tiene dos variables: el crecimiento del PIB, $\Delta y_t$, y la tasa de desempleo, $u_t$. Como en la identificación recursiva, los errores reducidos son $e_t = B\varepsilon_t$ con $BB' = \Sigma_e$, y nos falta $n(n-1)/2 = 1$ restricción. Ahora la ponemos sobre el **efecto acumulado** de los choques. La representación MA del VAR es
+
+$$
+X_t = \mu + \sum_{h=0}^{\infty} \Psi_h B\,\varepsilon_{t-h}, \qquad
+C(1) \equiv \sum_{h=0}^{\infty} \Psi_h B = (I - A_1 - \dots - A_p)^{-1} B .
+$$
+
+El elemento $(1, j)$ de $C(1)$ es la suma de todas las respuestas del **crecimiento** del PIB al choque $j$, es decir, el efecto de largo plazo sobre el **nivel** del PIB. Blanchard y Quah suponen:
+
+- **Choque de oferta** ($\varepsilon_1$, productividad): puede afectar el nivel del PIB para siempre.
+- **Choque de demanda** ($\varepsilon_2$): su efecto sobre el nivel del PIB desaparece, $C(1)_{12} = 0$.
+
+Esa restricción hace a $C(1)$ triangular inferior. Como $C(1)C(1)' = F\Sigma_e F'$ con $F = (I - A_1 - \dots - A_p)^{-1}$, se obtiene $C(1) = \text{chol}(F\Sigma_e F')$ y, de ahí, $B = F^{-1} C(1)$. Es lo que hace `vars::BQ()` y también la opción `VARopt.ident = 'long'` del Toolbox de MATLAB.
+
+> El desempleo es estacionario, de modo que ningún choque tiene efecto permanente sobre él; la restricción sólo dice algo sobre el PIB.
+
+## 2. Paquetes y datos
+
+```{r}
+if (!require(pacman)) install.packages("pacman")
+library(pacman)
+p_load("readxl", "vars", "dplyr", "tidyr", "ggplot2", "knitr")
+
+# La primera fila del Excel tiene nombres largos y la segunda los cortos (y, u):
+bq <- read_excel("BQ1989_Data.xlsx", skip = 1)
+names(bq)[1] <- "fecha"
+bq <- bq %>%
+  mutate(across(c(y, u), as.numeric))
+
+head(bq)
+nrow(bq)
+```
+
+| Variable | Descripción | Transformación (ya aplicada en el archivo) |
+|---|---|---|
+| `fecha` | Trimestre (`1948Q2`, ..., `1987Q4`) | — |
+| `y` | Crecimiento trimestral (diferencia logarítmica × 100) del producto real de EE.UU. El artículo usa el PNB (*GNP*); el Excel lo etiqueta como *GDP growth* | Se le resta su media por separado en 1948T2-1973T4 y en 1974T1-1987T4: la productividad se desaceleró después del primer choque petrolero (3.62% contra 2.43% anual) |
+| `u` | Tasa de desempleo, en puntos porcentuales | Se le resta una tendencia lineal (el desempleo promedio subió poco a poco en la posguerra) |
+
+Las dos series tienen media cero, como en el artículo original:
+
+```{r}
+round(colMeans(bq[, c("y", "u")]), 4)
+
+bq %>%
+  mutate(t = seq(1948.25, by = 0.25, length.out = n())) %>%
+  pivot_longer(c(y, u)) %>%
+  mutate(name = recode(name, y = "Crecimiento del PIB (y)", u = "Desempleo sin tendencia (u)")) %>%
+  ggplot(aes(x = t, y = value)) +
+  geom_hline(yintercept = 0, colour = "gray50") +
+  geom_line(colour = "steelblue4") +
+  facet_wrap(~ name, ncol = 1, scales = "free_y") +
+  labs(x = NULL, y = NULL) +
+  theme_minimal()
+```
+
+## 3. VAR reducido
+
+Igual que en el artículo y en `GO_BQ1989.m`: 8 rezagos y constante.
+
+```{r}
+var.bq <- vars::VAR(bq[, c("y", "u")], p = 8, type = "const")
+summary(var.bq)$covres
+max(roots(var.bq))
+```
+
+## 4. Identificación de largo plazo con `BQ()`
+
+```{r}
+svar.bq <- BQ(var.bq)
+svar.bq
+
+# Matriz de efectos de largo plazo C(1): el cero arriba de la diagonal es la restricción
+round(svar.bq$LRIM, 4)
+
+# Comprobación de la fórmula de la Sección 1: B = F^{-1} C(1)
+A.suma <- Reduce(`+`, Acoef(var.bq))
+F.inf  <- solve(diag(2) - A.suma)
+all.equal(unname(solve(F.inf) %*% svar.bq$LRIM), unname(svar.bq$B))
+```
+
+Cholesky normaliza la diagonal de $C(1)$ a valores positivos, y con esa convención el choque de demanda sale **contractivo**: en el impacto baja el crecimiento del PIB (`r round(svar.bq$B[1, 2], 2)`) y sube el desempleo (`r round(svar.bq$B[2, 2], 2)`). Blanchard y Quah presentan un choque de demanda **expansivo** (que sube el PIB y baja el desempleo); para eso basta cambiar el signo de la segunda columna de $B$, igual que hace `-IR(:,:,2)` en el código de MATLAB. Las restricciones de identificación nunca fijan el signo de un choque: sólo su dirección.
+
+## 5. Replicación de la Figura 2
+
+La IRF de `y` es la respuesta del **crecimiento** del PIB. La del **nivel** del PIB es su suma acumulada.
+
+```{r}
+H <- 40
+ir.bq <- vars::irf(svar.bq, n.ahead = H - 1, boot = FALSE)
+
+# ir.bq$irf$y: respuestas (columnas y, u) al choque 1 (oferta)
+# ir.bq$irf$u: respuestas (columnas y, u) al choque 2 (demanda)
+fig2 <- bind_rows(
+  data.frame(trimestre = 1:H, choque = "Choque de oferta",
+             `Nivel del PIB` = cumsum(ir.bq$irf$y[, "y"]),
+             Desempleo       = ir.bq$irf$y[, "u"], check.names = FALSE),
+  data.frame(trimestre = 1:H, choque = "Choque de demanda",
+             `Nivel del PIB` = cumsum(-ir.bq$irf$u[, "y"]),
+             Desempleo       = -ir.bq$irf$u[, "u"], check.names = FALSE)) %>%
+  pivot_longer(c(`Nivel del PIB`, Desempleo), names_to = "variable") %>%
+  mutate(choque = factor(choque, levels = c("Choque de oferta", "Choque de demanda")))
+
+ggplot(fig2, aes(x = trimestre, y = value, colour = variable)) +
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  geom_line(linewidth = 1.3) +
+  facet_wrap(~ choque, scales = "free_y") +
+  scale_colour_manual(values = c("Nivel del PIB" = "#0072BD", "Desempleo" = "#EDB120")) +
+  labs(x = "Trimestres", y = NULL, colour = NULL,
+       title = "Blanchard y Quah (1989), Figura 2: respuestas a choques de una desviación estándar") +
+  theme_minimal() +
+  theme(legend.position = "bottom")
+```
+
+```{r}
+# Valores en trimestres seleccionados (comparables con BQ_Replication.pdf, generado en MATLAB)
+fig2 %>%
+  filter(trimestre %in% c(1, 2, 3, 5, 9, 17, 40)) %>%
+  mutate(value = round(value, 3)) %>%
+  pivot_wider(names_from = c(choque, variable), values_from = value) %>%
+  kable()
+```
+
+Los números coinciden con los del Toolbox de MATLAB (`BQ_Replication.pdf`): el PIB responde a la oferta con 0.075 en el impacto, alcanza un máximo cercano a 0.83 hacia el trimestre 9 y se estabiliza en 0.52; a la demanda, sube a 1.31 en el trimestre 3 y regresa a cero.
+
+**Lectura.**
+
+- **Oferta.** El efecto sobre el nivel del PIB crece durante unos dos años y se vuelve permanente. El desempleo **sube** al principio: si la productividad aumenta y la demanda tarda en ajustarse, se necesita menos trabajo para producir lo mismo.
+- **Demanda.** El PIB y el desempleo se mueven en espejo (ley de Okun), alcanzan su máximo entre 2 y 4 trimestres y desaparecen hacia los 5 años. Ese regreso a cero no es un resultado: es el **supuesto** de identificación.
+
+## 6. Bandas de confianza
+
+```{r, fig.width = 9, fig.height = 7}
+set.seed(1989)
+ir.bq.boot <- vars::irf(svar.bq, n.ahead = H - 1, boot = TRUE, runs = 500,
+                        ci = 0.68, cumulative = TRUE)
+plot(ir.bq.boot)
+```
+
+Con `cumulative = TRUE` las respuestas de **ambas** variables aparecen acumuladas: para `y` es el nivel del PIB, que es lo que nos interesa; para `u` la suma acumulada no tiene interpretación económica directa, así que en esa fila conviene ver la gráfica de la Sección 5. Recuerda además que el choque de demanda en esta gráfica tiene el signo opuesto al de la Figura 2.
+
+## 7. Descomposición de varianza
+
+```{r}
+fevd.bq <- fevd(svar.bq, n.ahead = H)
+round(fevd.bq$y[c(1, 4, 8, 12, 20, 40), ], 3)
+round(fevd.bq$u[c(1, 4, 8, 12, 20, 40), ], 3)
+```
+
+Las columnas son la proporción de la varianza del error de pronóstico explicada por el choque de oferta (columna `y`) y por el de demanda (columna `u`). Con esta identificación, la demanda explica casi toda la varianza del **crecimiento** del PIB a corto plazo (la oferta mueve sobre todo su nivel de largo plazo, que se acumula poco a poco). En el desempleo, la oferta explica la mitad de la varianza en el impacto, pero a partir del primer año la demanda explica más de tres cuartas partes.
+
+---
+
+## Ejercicios
+
+1. Estima un VAR recursivo con las mismas variables y el orden $(y, u)$ usando `vars::irf(var.bq, ortho = TRUE)`. Compara las respuestas con las de la Sección 5: ¿qué restricción impone cada esquema y en qué horizonte?
+2. Repite la estimación con 4 y con 12 rezagos. ¿Qué tan sensible es la respuesta del nivel del PIB al choque de oferta? Blanchard y Quah discuten esta sensibilidad en la Sección III del artículo (`BQ1989_Paper.pdf`).
+3. Elimina la corrección del cambio de media de 1973: suma a `y` la diferencia de medias entre los subperiodos (o, más sencillo, usa sólo la muestra 1948-1973) y vuelve a estimar. ¿Por qué un error en la tendencia contamina precisamente la restricción de largo plazo?

@@ -15,77 +15,125 @@ editor_options:
 
 ## ¿Qué aprenderemos hoy?
 
-Implementamos un VAR estructural recursivo (SVAR con restricciones de corto plazo) aplicando previamente un ajuste estacional X-13 a los datos. El enfoque recursivo de Cholesky es el más sencillo de los esquemas de identificación estructural; en sesiones posteriores veremos restricciones de largo plazo y de signo.
+Estimamos un VAR estructural recursivo (SVAR con restricciones de corto plazo) para medir cómo responden el consumo y la inversión en México a un choque de **incertidumbre de política comercial de Estados Unidos**. Antes de estimar, desestacionalizamos las series con X-13. El esquema recursivo (Cholesky) es el más sencillo de identificar; el jueves veremos restricciones de largo plazo (Blanchard y Quah, 1989) y de signo (Uhlig, 2005).
 
 Al terminar esta clase deberás poder:
 
-1. Pre-procesar series con ajuste estacional X-13 antes de estimar un VAR
-2. Estimar un SVAR recursivo usando `SVAR()` con la matriz A de restricciones contemporáneas
-3. Interpretar las IRFs estructurales y compararlas con las IRFs del VAR reducido
+1. Preprocesar series con ajuste estacional X-13 y transformarlas en tasas de crecimiento anual antes de estimar un VAR
+2. Explicar qué supuesto económico impone el **orden** de las variables en una identificación recursiva
+3. Estimar e interpretar IRF estructurales con `vars::irf(ortho = TRUE)` y con `svars::id.chol()`, y explicar por qué ambas dan el mismo punto y bandas distintas
 
-**Datos:** `VAR_Recursivo.xlsx`
+**Datos:** `VAR_Recursivo.xlsx` (mensual, ene-1999 a feb-2025, 314 observaciones)
 
 ---
+
+## 1. Del VAR reducido al VAR estructural
+
+El VAR en forma reducida que estimamos en las clases 15 y 16 es
+
+$$
+Y_t = c + A_1 Y_{t-1} + \dots + A_p Y_{t-p} + u_t, \qquad E[u_t u_t'] = \Sigma_u .
+$$
+
+Los errores $u_t$ están correlacionados entre ecuaciones, así que un "choque en $u_{2t}$" no tiene interpretación económica: siempre viene acompañado de movimientos en los otros errores. Suponemos que los errores reducidos son combinaciones lineales de **choques estructurales** $\varepsilon_t$ no correlacionados:
+
+$$
+u_t = B\,\varepsilon_t, \qquad E[\varepsilon_t \varepsilon_t'] = I \quad\Longrightarrow\quad B B' = \Sigma_u .
+$$
+
+$\Sigma_u$ es simétrica y aporta $n(n+1)/2$ ecuaciones, pero $B$ tiene $n^2$ incógnitas: faltan $n(n-1)/2$ restricciones. La identificación **recursiva** las obtiene haciendo $B$ triangular inferior, es decir, $B = \text{chol}(\Sigma_u)$. Así:
+
+- la variable 1 sólo reacciona en el mismo mes a su propio choque;
+- la variable 2 reacciona en el mismo mes a los choques 1 y 2;
+- ... y la última variable reacciona en el mismo mes a todos los choques.
+
+Por eso **el orden de las variables es el supuesto de identificación**. A partir del mes siguiente todas las variables pueden responder a todos los choques a través de los rezagos. La IRF estructural a $h$ periodos es $\Theta_h = \Psi_h B$, donde $\Psi_h$ son los coeficientes de la representación MA($\infty$) del VAR (Clase 16).
+
+## 2. Paquetes y datos
 
 ```{r}
 # En un .Rmd el directorio de trabajo es la carpeta del propio archivo,
 # de modo que las rutas relativas funcionan sin setwd().
 Sys.setlocale("LC_TIME", "es_ES.UTF-8")
 
-# ===================================================================
-# LIBRERIAS
-# ===================================================================
-
 if (!require(pacman)) install.packages("pacman")
 library(pacman)
 p_load("readxl", "seasonal", "ggplot2", "dplyr", "vars", "svars", "lubridate",
-       "zoo", "tseries", "scales", "stats", "tidyr", "ggthemes")
-
-# ===================================================================
-# DATOS
-# ===================================================================
+       "zoo", "tseries", "scales", "stats", "tidyr", "ggthemes", "knitr")
 
 data <- read_excel("VAR_Recursivo.xlsx")
-
+head(data)
 ```
 
+Las variables de la hoja `Hoja1` son:
+
+| Variable | Descripción | Fuente | Unidad | Transformación |
+|---|---|---|---|---|
+| `fecha` | Mes de la observación | — | ene-1999 a feb-2025 | — |
+| `shad` | Tasa sombra de fondos federales de Wu y Xia (coincide con la tasa efectiva de la Fed fuera del límite inferior cero; es negativa en 2009-2015) | Reserva Federal de Atlanta | % anual | Nivel |
+| `inc` | Índice de incertidumbre de política comercial de EE.UU. (componente "9. Trade policy" del EPU categórico) | Baker, Bloom y Davis, [policyuncertainty.com](https://www.policyuncertainty.com/categorical_epu.html) | Índice | Nivel |
+| `fix` | Tipo de cambio FIX | Banxico | Pesos por dólar | Crecimiento anual |
+| `igae` | Indicador Global de la Actividad Económica, con ajuste estacional | INEGI, base 2018 = 100 | Índice | Crecimiento anual |
+| `cons` | Indicador mensual del consumo privado en el mercado interior | INEGI, base 2018 = 100 | Índice | X-13 y crecimiento anual |
+| `inv` | Indicador mensual de la inversión fija bruta total | INEGI, base 2018 = 100 | Índice | X-13 y crecimiento anual |
+| `inv.p` | Indicador mensual de la inversión fija bruta pública | INEGI, base 2018 = 100 | Índice | X-13 y crecimiento anual |
+| `cetes` | Tasa de CETES a 28 días | Banxico | % anual | Nivel |
+
+`cons`, `inv` e `inv.p` vienen **sin** ajuste estacional; `igae` ya viene desestacionalizado de origen y `fix`, `shad`, `inc` y `cetes` no tienen un patrón estacional relevante.
+
+## 3. Ajuste estacional con X-13
+
+`seas()` necesita saber en qué mes empieza la serie: con esa información construye los regresores de días hábiles y de Semana Santa y fecha los valores atípicos. Por eso tomamos el inicio de la propia columna `fecha` en lugar de escribirlo a mano.
+
 ```{r}
-# ===================================================================
-# AJUSTE ESTACIONAL CON X-13
-# ===================================================================
+inicio <- c(year(min(data$fecha)), month(min(data$fecha)))
+inicio
 
 vars_sa <- c("cons", "inv", "inv.p")
 
 for (v in vars_sa) {
   ts_temp <- ts(
     data[[v]],
-    start     = c(2008, 12),
+    start     = inicio,
     frequency = 12
   )
-  data_sa <- seas(ts_temp) 
+  data_sa <- seas(ts_temp)
   data[[paste0(v, "_sa")]] <- as.numeric(final(data_sa))
 }
 
-# CONSUMO:
-ggplot(data, aes(x=fecha)) + 
-  geom_line(aes(y = cons), colour = "blue") + 
-  geom_line(aes(y = cons_sa), colour = "red")
-
-# INVERSIÓN: 
-ggplot(data, aes(x=fecha)) + 
-  geom_line(aes(y = inv), colour = "blue") + 
-  geom_line(aes(y = inv_sa), colour = "red")
-  
-data <- data %>% 
-  dplyr::select(fecha, cons_sa, inv_sa, inv.p_sa, inc, shad, fix, igae, cetes)
-
+# Modelo elegido por X-13 para el consumo: regresores, atípicos y ARIMA estacional
+summary(seas(ts(data$cons, start = inicio, frequency = 12)))
 ```
 
-```{r}
-# ===================================================================
-# TASAS DE CRECIMIENTO ANUAL: ln(X_t) - ln(X_t-12)
-# ===================================================================
+Fíjate en la lista de atípicos: X-13 encuentra los cambios de nivel de dic-2008 (crisis financiera) y abr-2020 (confinamiento por COVID-19), y el regresor de Semana Santa (`Easter`) es muy significativo. Si se declara mal el mes de inicio, los mismos choques aparecen con fechas imposibles (por ejemplo, "2030") y el efecto de Semana Santa se asigna a meses equivocados.
 
+```{r, fig.height = 7}
+data %>%
+  dplyr::select(fecha, cons, cons_sa, inv, inv_sa, inv.p, inv.p_sa) %>%
+  pivot_longer(-fecha) %>%
+  mutate(
+    variable = case_when(
+      grepl("^cons", name)  ~ "Consumo privado",
+      grepl("^inv\\.p", name) ~ "Inversión pública",
+      TRUE                  ~ "Inversión total"),
+    serie = ifelse(grepl("_sa$", name), "Con ajuste X-13", "Original")) %>%
+  ggplot(aes(x = fecha, y = value, colour = serie)) +
+  geom_line() +
+  facet_wrap(~ variable, ncol = 1, scales = "free_y") +
+  scale_colour_manual(values = c("Original" = "gray60", "Con ajuste X-13" = "red")) +
+  labs(x = NULL, y = "Índice, 2018 = 100", colour = NULL) +
+  theme_minimal() +
+  theme(legend.position = "bottom")
+
+data <- data %>%
+  dplyr::select(fecha, cons_sa, inv_sa, inv.p_sa, inc, shad, fix, igae, cetes)
+```
+
+## 4. Tasas de crecimiento anual
+
+Las variables en índice o en pesos por dólar tienen tendencia, así que las expresamos como crecimiento anual en logaritmos, $\ln X_t - \ln X_{t-12}$. Una respuesta de $-0.005$ en estas variables significa **medio punto porcentual menos** de crecimiento anual. Las tasas (`shad`, `cetes`) y el índice de incertidumbre (`inc`) se quedan en niveles. Perdemos los primeros 12 meses: la muestra del VAR empieza en ene-2000.
+
+```{r}
 data.ln <- function(data, vars) {
   for (v in vars) {
     data[[v]] <- log(data[[v]]) - log(dplyr::lag(data[[v]], 12))
@@ -95,166 +143,171 @@ data.ln <- function(data, vars) {
 
 vars_ln <- c("cons_sa", "inv_sa", "inv.p_sa", "fix", "igae")
 
-data1 <- data.ln(data, vars_ln) %>% 
+data1 <- data.ln(data, vars_ln) %>%
   drop_na()
 
+range(data1$fecha)
+nrow(data1)
+```
+
+```{r, fig.height = 7}
+data1 %>%
+  pivot_longer(-fecha) %>%
+  ggplot(aes(x = fecha, y = value)) +
+  geom_hline(yintercept = 0, colour = "gray50") +
+  geom_line(colour = "red") +
+  facet_wrap(~ name, ncol = 2, scales = "free_y") +
+  labs(x = NULL, y = NULL,
+       title = "Variables del VAR: crecimiento anual (logs) o niveles") +
+  theme_minimal()
+```
+
+## 5. Pruebas de raíz unitaria
+
+Usamos la prueba ADF con constante (`type = "drift"`) y elegimos los rezagos por AIC hasta 12 meses (Clase 13). Rechazamos la raíz unitaria al 5% si el estadístico $\tau$ es menor que el valor crítico.
+
+```{r}
+vars_adf <- c("cons_sa", "inv_sa", "inv.p_sa", "inc", "shad", "fix", "igae", "cetes")
+
+tabla_adf <- do.call(rbind, lapply(vars_adf, function(v) {
+  prueba <- ur.df(data1[[v]], type = "drift", lags = 12, selectlags = "AIC")
+  data.frame(
+    variable  = v,
+    tau       = round(prueba@teststat[1, "tau2"], 2),
+    vc_5      = prueba@cval["tau2", "5pct"],
+    rechaza_5 = prueba@teststat[1, "tau2"] < prueba@cval["tau2", "5pct"])
+}))
+
+kable(tabla_adf, col.names = c("Variable", "τ", "Valor crítico 5%", "¿Rechaza raíz unitaria?"))
+```
+
+Las tasas de crecimiento y CETES son estacionarias. `inv.p_sa` queda en la frontera, la tasa sombra no rechaza por poco y el índice de incertidumbre **no rechaza**: su nivel sube de forma persistente desde 2016. En la literatura de incertidumbre (Caldara et al., 2020) es habitual estimar el VAR con estos índices en niveles; las estimaciones por MCO siguen siendo consistentes, pero la inferencia es menos confiable. Lo retomamos en el Ejercicio 3.
+
+## 6. Orden recursivo, rezagos y estimación
+
+Estimamos dos VAR, uno para el consumo y otro para la inversión. El orden va **de lo más exógeno a lo más endógeno** para la economía mexicana en el mismo mes:
+
+1. `shad`: la Fed no reacciona en el mes a lo que pasa en México.
+2. `inc`: la incertidumbre comercial de EE.UU. puede responder a la Fed, pero no a variables mexicanas.
+3. `fix`: el tipo de cambio es un precio financiero que absorbe de inmediato los choques externos.
+4. `igae`: la actividad agregada.
+5. `cons_sa` (o `inv.p_sa` y luego `inv_sa`): el componente del gasto que nos interesa. La inversión pública va antes que la total porque se decide con el presupuesto y no responde en el mes a la inversión privada.
+6. `cetes`: Banxico observa todo lo anterior y reacciona en el mes; sus decisiones afectan la actividad sólo con rezago.
+
+```{r}
+vars_cons <- c("shad", "inc", "fix", "igae", "cons_sa", "cetes")
+vars_inv  <- c("shad", "inc", "fix", "igae", "inv.p_sa", "inv_sa", "cetes")
+
 # CONSUMO:
-ggplot(data1, aes(x=fecha)) + 
-  geom_line(aes(y = cons_sa), colour = "red")
+VARselect(data1[, vars_cons], lag.max = 6, type = "const")$selection
 
 # INVERSIÓN:
-ggplot(data1, aes(x=fecha)) + 
-  geom_line(aes(y = inv_sa), colour = "red")
-
+VARselect(data1[, vars_inv], lag.max = 6, type = "const")$selection
 ```
 
-```{r}
-# ===================================================================
-# PRUEBA ADF 
-# ===================================================================
-
-summary(ur.df(data1$cons_sa))
-summary(ur.df(data1$inv_sa))
-summary(ur.df(data1$inv.p_sa))
-summary(ur.df(data1$inc))
-summary(ur.df(data1$shad))
-summary(ur.df(data1$fix))
-summary(ur.df(data1$igae))
-summary(ur.df(data1$cetes))
-
-```
+AIC y FPE sugieren 3 rezagos y los criterios más parsimoniosos (HQ, SC) entre 1 y 2. Con 6 y 7 variables cada rezago añade 36 o 49 coeficientes, así que tomamos el criterio de Schwarz: $p = 2$ para el consumo y $p = 1$ para la inversión.
 
 ```{r}
-# ===================================================================
-# SELECCIÓN DE REZAGOS Y ESTIMACIÓN DE MODELOS
-# ===================================================================
-
 # CONSUMO:
-VARselect(
-  data1[,c("shad", "inc", "fix", "igae", "cons_sa", "cetes")],
-  lag.max = 6,
-  type = "const")
-
 c.r.var <- vars::VAR(
-  data1[,c("shad", "inc", "fix", "igae", "cons_sa", "cetes")],
+  data1[, vars_cons],
   p      = 2,
   type   = "const")
 
-c.s.var <- id.chol(c.r.var)
-
 # INVERSIÓN:
-VARselect(
-  data1[,c("shad", "inc", "fix", "igae", "inv.p_sa", "inv_sa", "cetes")],
-  lag.max = 6,
-  type = "const")
-
 i.r.var <- vars::VAR(
-  data1[,c("shad", "inc", "fix", "igae", "inv.p_sa", "inv_sa", "cetes")],
+  data1[, vars_inv],
   p      = 1,
   type   = "const")
 
-i.s.var <- id.chol(i.r.var)
+# Estabilidad: todas las raíces del polinomio característico deben ser menores que 1
+max(roots(c.r.var))
+max(roots(i.r.var))
 
+# Autocorrelación de los residuales (Portmanteau, 24 rezagos)
+serial.test(c.r.var, lags.pt = 24, type = "PT.adjusted")$serial
+serial.test(i.r.var, lags.pt = 24, type = "PT.adjusted")$serial
 ```
 
+Ambos VAR son estables, aunque con raíces cercanas a 1 (las respuestas serán persistentes). La prueba Portmanteau **rechaza** la ausencia de autocorrelación: con tan pocos rezagos los residuales todavía tienen estructura. Lo dejamos así para que el ejemplo sea fácil de seguir, pero conviene revisar si las IRF cambian con $p = 3$ (Ejercicio 3).
+
+## 7. Opción A: IRF ortogonalizadas con `vars`
+
+`irf(..., ortho = TRUE)` calcula $\Theta_h = \Psi_h B$ con $B = \text{chol}(\Sigma_u)$ en el orden en que aparecen las columnas. El choque es de **una desviación estándar** del choque estructural de incertidumbre; las bandas al 90% salen de un bootstrap de residuales con 1,000 réplicas.
+
 ```{r}
-# ===================================================================
-# OPCIÓN A)
-# FUNCIONES IRF CON "ORTHO = TRUE"
-# ===================================================================
+# Tamaño del choque: elemento (inc, inc) de B, en puntos del índice
+B.c <- t(chol(summary(c.r.var)$covres))
+round(B.c, 4)
+B.c["inc", "inc"]
+```
+
+Un choque de una desviación estándar equivale a unos `r round(B.c["inc", "inc"])` puntos del índice de incertidumbre; para dimensionarlo, el índice promedió 195 en 2018 y 388 en ene-feb 2025.
+
+```{r}
+# Convierte un objeto de vars::irf en data frame y lo grafica.
+# coord_cartesian() acota la vista sin eliminar datos: con limits= en la escala,
+# ggplot descarta los tramos de la banda que se salen del rango.
+graficar_irf <- function(obj, impulso, titulo) {
+  df <- data.frame(
+    resp = obj$irf[[impulso]][, 1],
+    low  = obj$Lower[[impulso]][, 1],
+    upp  = obj$Upper[[impulso]][, 1],
+    time = 0:(nrow(obj$irf[[impulso]]) - 1))
+
+  ggplot(df, aes(x = time)) +
+    geom_ribbon(aes(ymin = low, ymax = upp), fill = "gray", alpha = 0.6) +
+    geom_hline(aes(yintercept = 0), colour = "black", linewidth = 1) +
+    geom_line(aes(y = resp), colour = "red", linetype = "solid", linewidth = 1.5) +
+    scale_y_continuous(breaks = seq(-.014, .004, by = .002),
+                       labels = label_percent(accuracy = .1)) +
+    scale_x_continuous(breaks = seq(from = 0, to = 36, by = 2)) +
+    coord_cartesian(ylim = c(-.014, .004)) +
+    labs(title = titulo, x = "Meses después del choque",
+         y = "Crecimiento anual (p.p.)") +
+    theme_classic() +
+    theme(
+      axis.text = element_text(size = 12, colour = "black", face = "bold"),
+      axis.title = element_text(size = 12, face = "bold"),
+      panel.background = element_rect(fill = "#d8eaf0", colour = NA),
+      plot.background = element_rect(fill = "#d8eaf0", colour = NA),
+      axis.line = element_line(linewidth = 1, colour = "black"),
+      axis.ticks = element_line(linewidth = 1, colour = "black"))
+}
+
+set.seed(2027)
 
 # CONSUMO:
-c.irf <- vars::irf(c.r.var, impulse = "inc", response = "cons_sa", 
-                   n.ahead = 36, ortho = TRUE, boot = TRUE, ci = 0.90, 
+c.irf <- vars::irf(c.r.var, impulse = "inc", response = "cons_sa",
+                   n.ahead = 36, ortho = TRUE, boot = TRUE, ci = 0.90,
                    runs = 1000)
-
-m.c.irf <- as.data.frame(c.irf$irf$inc)
-colnames(m.c.irf)[1] <- c("resp")
-l.c.irf <- as.data.frame(c.irf$Lower$inc)
-colnames(l.c.irf)[1] <- c("low")
-u.c.irf <- as.data.frame(c.irf$Upper$inc)
-colnames(u.c.irf)[1] <- c("upp")
-
-df.c.irf <- cbind(m.c.irf, l.c.irf, u.c.irf)
-df.c.irf$time <- seq(from = 0, 
-                     to = 36, 
-                     by = 1)
-
-irf.c <- ggplot(df.c.irf, aes(x = time)) + 
-  geom_ribbon(aes(ymin = low, ymax = upp), fill = "gray", 
-              alpha = 0.6) + 
-  geom_hline(aes(yintercept = 0), colour = "black", linewidth = 1) + 
-  geom_line(aes(y = resp), colour = "red", linetype = "solid", 
-            linewidth = 1.5) + 
-  scale_y_continuous(breaks = seq(-.014, .002, by = .002), 
-                     limits = c(-.014, .002),
-                     labels = label_percent(accuracy = .1)) +
-  scale_x_continuous(breaks = seq(from = 0, 
-                                  to = 36, 
-                                  by = 2)) +
-  labs(title = "", x = NULL, y = "") +
-  theme_classic() +
-  theme(
-    axis.text = element_text(family = "Arial", size = 14, colour = "black", 
-                             face = "bold"),
-    axis.title = element_text(family = "Arial", size = 14, face = "bold"),
-    panel.background = element_rect(fill = "#d8eaf0", colour = NA),
-    plot.background = element_rect(fill = "#d8eaf0", colour = NA),
-    axis.line = element_line(linewidth = 1, colour = "black"),
-    axis.ticks = element_line(linewidth = 1, colour = "black"))
+irf.c <- graficar_irf(c.irf, "inc", "Respuesta del consumo a un choque de incertidumbre comercial")
 irf.c
 
 # INVERSIÓN:
-i.irf <- vars::irf(i.r.var, impulse = "inc", response = "inv_sa", 
-                   n.ahead = 36, ortho = TRUE, boot = TRUE, ci = 0.90, 
+i.irf <- vars::irf(i.r.var, impulse = "inc", response = "inv_sa",
+                   n.ahead = 36, ortho = TRUE, boot = TRUE, ci = 0.90,
                    runs = 1000)
-
-m.i.irf <- as.data.frame(i.irf$irf$inc)
-colnames(m.i.irf)[1] <- c("resp")
-l.i.irf <- as.data.frame(i.irf$Lower$inc)
-colnames(l.i.irf)[1] <- c("low")
-u.i.irf <- as.data.frame(i.irf$Upper$inc)
-colnames(u.i.irf)[1] <- c("upp")
-
-df.i.irf <- cbind(m.i.irf, l.i.irf, u.i.irf)
-df.i.irf$time <- seq(from = 0, 
-                     to = 36, 
-                     by = 1)
-
-irf.i <- ggplot(df.i.irf, aes(x = time)) + 
-  geom_ribbon(aes(ymin = low, ymax = upp), fill = "gray", 
-              alpha = 0.6) + 
-  geom_hline(aes(yintercept = 0), colour = "black", linewidth = 1) + 
-  geom_line(aes(y = resp), colour = "red", linetype = "solid", 
-            linewidth = 1.5) + 
-  scale_y_continuous(breaks = seq(-.014, .002, by = .002), 
-                     limits = c(-.014, .002),
-                     labels = label_percent(accuracy = .1)) +
-  scale_x_continuous(breaks = seq(from = 0, 
-                                  to = 36, 
-                                  by = 2)) +
-  labs(title = "", x = NULL, y = "") +
-  theme_classic() +
-  theme(
-    axis.text = element_text(family = "Arial", size = 14, colour = "black", 
-                             face = "bold"),
-    axis.title = element_text(family = "Arial", size = 14, face = "bold"),
-    panel.background = element_rect(fill = "#d8eaf0", colour = NA),
-    plot.background = element_rect(fill = "#d8eaf0", colour = NA),
-    axis.line = element_line(linewidth = 1, colour = "black"),
-    axis.ticks = element_line(linewidth = 1, colour = "black"))
+irf.i <- graficar_irf(i.irf, "inc", "Respuesta de la inversión a un choque de incertidumbre comercial")
 irf.i
-
 ```
 
 ```{r}
-# ===================================================================
-# OPCIÓN B)
-# FUNCIONES IRF CON "SVARS"
-# ===================================================================
+# Respuestas puntuales en meses seleccionados (en puntos porcentuales)
+meses <- c(0, 3, 6, 12, 24, 36)
+data.frame(
+  mes       = meses,
+  consumo   = round(100 * c.irf$irf$inc[meses + 1, 1], 2),
+  inversion = round(100 * i.irf$irf$inc[meses + 1, 1], 2))
+```
 
-# Identificamos los choques estructurales con "id.chol":
+**Lectura.** Tras un aumento de la incertidumbre comercial de EE.UU., el crecimiento anual del consumo cae alrededor de medio punto porcentual en los primeros meses y se recupera hacia el año. La inversión cae más y de forma más persistente (el máximo llega entre 6 y 12 meses): es el canal de "esperar y ver" de las decisiones irreversibles. Como trabajamos con tasas anuales, una caída sostenida de la tasa implica una pérdida de **nivel** acumulada.
 
+## 8. Opción B: identificación con `svars`
+
+`svars::id.chol()` toma el VAR reducido y calcula la misma $B = \text{chol}(\Sigma_u)$. La diferencia con la Opción A está en la **inferencia**: `wild.boot()` usa un bootstrap salvaje (multiplica los residuales por variables aleatorias de Rademacher), que es robusto a heterocedasticidad condicional, frecuente en datos financieros y en periodos como 2008-2009 y 2020.
+
+```{r}
 # CONSUMO:
 c.svar <- id.chol(c.r.var)
 summary(c.svar)
@@ -263,31 +316,35 @@ summary(c.svar)
 i.svar <- id.chol(i.r.var)
 summary(i.svar)
 
+# Verificación: la matriz de impacto de svars es la misma que en la Opción A
+all.equal(unname(c.svar$B), unname(B.c), tolerance = 1e-6)
 ```
 
-```{r}
-# ===================================================================
-# IRF OPCIÓN B)
-# ===================================================================
+La identificación es idéntica (`TRUE`), así que la respuesta puntual coincide con la Opción A; sólo cambian las bandas.
 
-# Graficamos las IRF con bandas de confianza:
+```{r, fig.width = 12, fig.height = 12}
+set.seed(2027)
+cores <- max(1, parallel::detectCores() - 1)
 
 # CONSUMO:
-cores <- parallel::detectCores() - 1
 boot.c.svar <- wild.boot(c.svar, n.ahead = 36, nboot = 1000, nc = cores)
-plot(boot.c.svar)
-
-# INVERSIÓN:
-cores <- parallel::detectCores() - 1
-boot.i.svar <- wild.boot(i.svar, n.ahead = 36, nboot = 1000, nc = cores)
-plot(boot.i.svar)
-
+plot(boot.c.svar, lowerq = 0.05, upperq = 0.95)
 ```
+
+```{r, fig.width = 13, fig.height = 13}
+# INVERSIÓN:
+boot.i.svar <- wild.boot(i.svar, n.ahead = 36, nboot = 1000, nc = cores)
+plot(boot.i.svar, lowerq = 0.05, upperq = 0.95)
+```
+
+Cada panel es "respuesta de la fila al choque de la columna" ($\varepsilon_{\text{shad}}, \varepsilon_{\text{inc}}, \dots$). Busca la columna del choque `inc` y la fila `cons_sa` o `inv_sa`: es la misma IRF de la Opción A, ahora con bandas al 90% del bootstrap salvaje.
+
+> **¿Y `vars::SVAR()`?** Esa función escribe el modelo como $A u_t = B\varepsilon_t$ y estima por máxima verosimilitud los elementos libres de $A$ o $B$. Sirve para restricciones de corto plazo **no** recursivas (por ejemplo, un cero arriba de la diagonal), pero la optimización es numérica: con variables de escalas tan distintas como `inc` (desviación estándar cercana a 30) e `igae` (cercana a 0.02) no converge a la solución de Cholesky. En el caso recursivo, la solución exacta es $B = \text{chol}(\Sigma_u)$ y no hace falta optimizar nada.
 
 ---
 
 ## Ejercicios
 
-1. ¿Por qué es necesario desestacionalizar las series antes de estimar el VAR? ¿Qué problema causaría estimar el VAR con las series originales si tienen estacionalidad determinística?
-2. Modifica el ordenamiento recursivo del SVAR: coloca `inv.p` antes que `inv`. ¿Cambian las IRFs estructurales? Discute qué supuesto económico implica cada ordenamiento.
-3. Compara las IRFs del SVAR recursivo con las del VAR reducido (identificación de Cholesky estándar). ¿Cuándo coinciden y cuándo difieren?
+1. ¿Qué habría pasado con el ajuste estacional si se declara que las series empiezan en dic-2008 cuando en realidad empiezan en ene-1999? Pruébalo con `seas(ts(data$cons, start = c(2008, 12), frequency = 12))` y compara la lista de atípicos y el regresor de Semana Santa con los de la Sección 3.
+2. Cambia el orden del VAR de inversión para que `inv_sa` vaya **antes** que `inv.p_sa`. ¿Cambian la respuesta de `inv_sa` al choque de `inc` y la de `inv.p_sa` al choque de `inv_sa`? Explica qué supuesto económico implica cada orden y por qué la respuesta a `inc` casi no se mueve (pista: piensa en qué columnas de $B$ cambian al permutar sólo las variables 5 y 6).
+3. Vuelve a estimar el VAR del consumo con $p = 3$ (lo que sugiere el AIC) y, por separado, con `inc` en logaritmos. ¿Desaparece la autocorrelación de la prueba Portmanteau? ¿Cambian el signo, la magnitud o la persistencia de la respuesta del consumo?
