@@ -81,7 +81,9 @@ bq %>%
   geom_hline(yintercept = 0, colour = "gray50") +
   geom_line(colour = "steelblue4") +
   facet_wrap(~ name, ncol = 1, scales = "free_y") +
-  labs(x = NULL, y = NULL) +
+  labs(title = "Datos de Blanchard y Quah (1989), EE.UU., 1948T2-1987T4",
+       subtitle = "Ambas series con media cero",
+       x = "Año", y = "Puntos porcentuales") +
   theme_minimal()
 ```
 
@@ -137,7 +139,8 @@ ggplot(fig2, aes(x = trimestre, y = value, colour = variable)) +
   geom_line(linewidth = 1.3) +
   facet_wrap(~ choque, scales = "free_y") +
   scale_colour_manual(values = c("Nivel del PIB" = "#0072BD", "Desempleo" = "#EDB120")) +
-  labs(x = "Trimestres", y = NULL, colour = NULL,
+  labs(x = "Trimestres después del choque",
+       y = "Nivel del PIB: % · Desempleo: puntos porcentuales", colour = NULL,
        title = "Blanchard y Quah (1989), Figura 2: respuestas a choques de una desviación estándar") +
   theme_minimal() +
   theme(legend.position = "bottom")
@@ -161,14 +164,45 @@ Los números coinciden con los del Toolbox de MATLAB (`BQ_Replication.pdf`): el 
 
 ## 6. Bandas de confianza
 
-```{r, fig.width = 9, fig.height = 7}
+Para el PIB necesitamos las bandas de la respuesta **acumulada** (el nivel), y para el desempleo las de la respuesta sin acumular, así que pedimos los dos bootstraps. Los percentiles de una suma acumulada no son la suma de los percentiles: por eso no basta con acumular las bandas a mano.
+
+```{r, fig.width = 9, fig.height = 6}
 set.seed(1989)
-ir.bq.boot <- vars::irf(svar.bq, n.ahead = H - 1, boot = TRUE, runs = 500,
-                        ci = 0.68, cumulative = TRUE)
-plot(ir.bq.boot)
+boot.nivel <- vars::irf(svar.bq, response = "y", n.ahead = H - 1, boot = TRUE,
+                        runs = 500, ci = 0.68, cumulative = TRUE)
+boot.u     <- vars::irf(svar.bq, response = "u", n.ahead = H - 1, boot = TRUE,
+                        runs = 500, ci = 0.68)
+
+# Arma un data frame para un choque y una variable. signo = -1 voltea el choque
+# de demanda para que sea expansivo, como en la Figura 2 (al voltear, las bandas se intercambian).
+banda <- function(obj, choque, var, signo, etq.choque, etq.var) {
+  est <- signo * obj$irf[[choque]][, var]
+  b1  <- signo * obj$Lower[[choque]][, var]
+  b2  <- signo * obj$Upper[[choque]][, var]
+  data.frame(trimestre = 1:H, choque = etq.choque, variable = etq.var,
+             est = est, inf = pmin(b1, b2), sup = pmax(b1, b2))
+}
+
+df.boot <- bind_rows(
+  banda(boot.nivel, "y", "y",  1, "Choque de oferta",  "Nivel del PIB (%)"),
+  banda(boot.u,     "y", "u",  1, "Choque de oferta",  "Desempleo (p.p.)"),
+  banda(boot.nivel, "u", "y", -1, "Choque de demanda", "Nivel del PIB (%)"),
+  banda(boot.u,     "u", "u", -1, "Choque de demanda", "Desempleo (p.p.)")) %>%
+  mutate(choque   = factor(choque, levels = c("Choque de oferta", "Choque de demanda")),
+         variable = factor(variable, levels = c("Nivel del PIB (%)", "Desempleo (p.p.)")))
+
+ggplot(df.boot, aes(x = trimestre)) +
+  geom_ribbon(aes(ymin = inf, ymax = sup), fill = "gray75") +
+  geom_line(aes(y = est), colour = "#0072BD", linewidth = 1.1) +
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  facet_grid(variable ~ choque, scales = "free_y") +
+  labs(title = "Respuestas a choques de oferta y de demanda, con bandas al 68%",
+       subtitle = "Bootstrap de residuales, 500 réplicas; choque de demanda expansivo",
+       x = "Trimestres después del choque", y = "Respuesta") +
+  theme_minimal()
 ```
 
-Con `cumulative = TRUE` las respuestas de **ambas** variables aparecen acumuladas: para `y` es el nivel del PIB, que es lo que nos interesa; para `u` la suma acumulada no tiene interpretación económica directa, así que en esa fila conviene ver la gráfica de la Sección 5. Recuerda además que el choque de demanda en esta gráfica tiene el signo opuesto al de la Figura 2.
+La banda del nivel del PIB ante el choque de oferta no incluye al cero después de unos cinco trimestres: el efecto permanente es significativo. Ante el choque de demanda, el efecto sobre el PIB se va a cero por construcción, y su banda se cierra en el largo plazo.
 
 ## 7. Descomposición de varianza
 

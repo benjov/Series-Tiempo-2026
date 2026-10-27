@@ -121,7 +121,9 @@ data %>%
   geom_line() +
   facet_wrap(~ variable, ncol = 1, scales = "free_y") +
   scale_colour_manual(values = c("Original" = "gray60", "Con ajuste X-13" = "red")) +
-  labs(x = NULL, y = "Índice, 2018 = 100", colour = NULL) +
+  labs(title = "Ajuste estacional con X-13",
+       subtitle = "Serie original y serie desestacionalizada, ene-1999 a feb-2025",
+       x = "Fecha", y = "Índice, 2018 = 100", colour = NULL) +
   theme_minimal() +
   theme(legend.position = "bottom")
 
@@ -151,14 +153,26 @@ nrow(data1)
 ```
 
 ```{r, fig.height = 7}
+etiquetas <- c(
+  shad     = "shad: tasa sombra de la Fed (%)",
+  inc      = "inc: incertidumbre comercial (índice)",
+  fix      = "fix: tipo de cambio (crec. anual)",
+  igae     = "igae: IGAE (crec. anual)",
+  cons_sa  = "cons_sa: consumo privado (crec. anual)",
+  inv.p_sa = "inv.p_sa: inversión pública (crec. anual)",
+  inv_sa   = "inv_sa: inversión total (crec. anual)",
+  cetes    = "cetes: CETES 28 días (%)")
+
 data1 %>%
   pivot_longer(-fecha) %>%
+  mutate(name = factor(etiquetas[name], levels = etiquetas)) %>%
   ggplot(aes(x = fecha, y = value)) +
   geom_hline(yintercept = 0, colour = "gray50") +
   geom_line(colour = "red") +
   facet_wrap(~ name, ncol = 2, scales = "free_y") +
-  labs(x = NULL, y = NULL,
-       title = "Variables del VAR: crecimiento anual (logs) o niveles") +
+  labs(title = "Variables del VAR, ene-2000 a feb-2025",
+       subtitle = "Crecimiento anual en logaritmos (0.1 = 10%) o niveles, según la variable",
+       x = "Fecha", y = "Valor (unidad indicada en cada panel)") +
   theme_minimal()
 ```
 
@@ -328,16 +342,22 @@ cores <- max(1, parallel::detectCores() - 1)
 
 # CONSUMO:
 boot.c.svar <- wild.boot(c.svar, n.ahead = 36, nboot = 1000, nc = cores)
-plot(boot.c.svar, lowerq = 0.05, upperq = 0.95)
+plot(boot.c.svar, lowerq = 0.05, upperq = 0.95) +
+  labs(title = "SVAR recursivo del consumo: todas las IRF estructurales",
+       subtitle = "Panel ε_j → x: respuesta de x al choque j; bandas al 90% con bootstrap salvaje (1,000 réplicas)",
+       x = "Meses después del choque", y = "Respuesta (unidades de cada variable)")
 ```
 
 ```{r, fig.width = 13, fig.height = 13}
 # INVERSIÓN:
 boot.i.svar <- wild.boot(i.svar, n.ahead = 36, nboot = 1000, nc = cores)
-plot(boot.i.svar, lowerq = 0.05, upperq = 0.95)
+plot(boot.i.svar, lowerq = 0.05, upperq = 0.95) +
+  labs(title = "SVAR recursivo de la inversión: todas las IRF estructurales",
+       subtitle = "Panel ε_j → x: respuesta de x al choque j; bandas al 90% con bootstrap salvaje (1,000 réplicas)",
+       x = "Meses después del choque", y = "Respuesta (unidades de cada variable)")
 ```
 
-Cada panel es "respuesta de la fila al choque de la columna" ($\varepsilon_{\text{shad}}, \varepsilon_{\text{inc}}, \dots$). Busca la columna del choque `inc` y la fila `cons_sa` o `inv_sa`: es la misma IRF de la Opción A, ahora con bandas al 90% del bootstrap salvaje.
+Cada panel $\varepsilon_j \rightarrow x$ es la respuesta de la variable $x$ (fila) al choque estructural $j$ (columna). Las unidades son las de cada variable: crecimiento anual en logaritmos para `fix`, `igae`, `cons_sa`, `inv_sa` e `inv.p_sa`; puntos porcentuales para `shad` y `cetes`, y puntos del índice para `inc`. Busca la columna del choque `inc` y la fila `cons_sa` o `inv_sa`: es la misma IRF de la Opción A, ahora con bandas al 90% del bootstrap salvaje.
 
 > **¿Y `vars::SVAR()`?** Esa función escribe el modelo como $A u_t = B\varepsilon_t$ y estima por máxima verosimilitud los elementos libres de $A$ o $B$. Sirve para restricciones de corto plazo **no** recursivas (por ejemplo, un cero arriba de la diagonal), pero la optimización es numérica: con variables de escalas tan distintas como `inc` (desviación estándar cercana a 30) e `igae` (cercana a 0.02) no converge a la solución de Cholesky. En el caso recursivo, la solución exacta es $B = \text{chol}(\Sigma_u)$ y no hace falta optimizar nada.
 

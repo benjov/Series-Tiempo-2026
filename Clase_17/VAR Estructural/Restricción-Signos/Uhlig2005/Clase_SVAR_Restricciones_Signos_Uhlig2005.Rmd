@@ -91,8 +91,9 @@ uh <- uh %>%
   mutate(across(all_of(vars_log), ~ 100 * .x))
 
 vnames <- c("y", "pi", "comm", "res", "nbres", "ff")
-nombres <- c(y = "PIB real", pi = "Deflactor del PIB", comm = "Precios de materias primas",
-             res = "Reservas totales", nbres = "Reservas no prestadas", ff = "Tasa de fondos federales")
+nombres <- c(y = "PIB real (%)", pi = "Deflactor del PIB (%)", comm = "Precios de materias primas (%)",
+             res = "Reservas totales (%)", nbres = "Reservas no prestadas (%)",
+             ff = "Tasa de fondos federales (p.p.)")
 ```
 
 ## 3. VAR reducido
@@ -225,7 +226,8 @@ ggplot(df.uh, aes(x = mes)) +
   geom_hline(yintercept = 0, linetype = "dashed") +
   annotate("rect", xmin = 1, xmax = H.sr, ymin = -Inf, ymax = Inf, alpha = 0.08) +
   facet_wrap(~ variable, ncol = 2, scales = "free_y") +
-  labs(x = "Meses", y = NULL,
+  labs(x = "Meses después del choque",
+       y = "Desviación respecto a la trayectoria sin choque",
        title = "Uhlig (2005), Figura 6: choque de política monetaria contractivo",
        subtitle = "Mediana y percentiles 16-84 de 500 extracciones; zona sombreada: meses con signos impuestos") +
   theme_minimal()
